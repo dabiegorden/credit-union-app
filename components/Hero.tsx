@@ -45,19 +45,19 @@ const BAR_HEIGHTS = [40, 55, 45, 70, 60, 85, 75, 90, 80];
 
 export default function Hero() {
   return (
-    <section className="relative min-h-screen bg-[#0B1D3A] flex items-center pt-[72px] overflow-hidden">
+    <section className="relative min-h-screen bg-[#0B1D3A] flex items-center pt-18 overflow-hidden">
       {/* Background layers */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,rgba(200,150,62,0.08)_0%,transparent_50%),radial-gradient(circle_at_80%_20%,rgba(26,53,96,0.6)_0%,transparent_50%),radial-gradient(circle_at_60%_80%,rgba(200,150,62,0.05)_0%,transparent_40%)]" />
+      <div className="absolute inset-0 bg-[radial-linear(circle_at_20%_50%,rgba(200,150,62,0.08)_0%,transparent_50%),radial-linear(circle_at_80%_20%,rgba(26,53,96,0.6)_0%,transparent_50%),radial-linear(circle_at_60%_80%,rgba(200,150,62,0.05)_0%,transparent_40%)]" />
       <div
         className="absolute inset-0 opacity-40"
         style={{
           backgroundImage:
-            "linear-gradient(rgba(200,150,62,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(200,150,62,0.06) 1px, transparent 1px)",
+            "linear-linear(rgba(200,150,62,0.06) 1px, transparent 1px), linear-linear(90deg, rgba(200,150,62,0.06) 1px, transparent 1px)",
           backgroundSize: "60px 60px",
           maskImage:
-            "radial-gradient(ellipse 80% 80% at 50% 50%, black 0%, transparent 100%)",
+            "radial-linear(ellipse 80% 80% at 50% 50%, black 0%, transparent 100%)",
           WebkitMaskImage:
-            "radial-gradient(ellipse 80% 80% at 50% 50%, black 0%, transparent 100%)",
+            "radial-linear(ellipse 80% 80% at 50% 50%, black 0%, transparent 100%)",
         }}
       />
 
@@ -65,7 +65,7 @@ export default function Hero() {
         {/* ── Left: Copy ── */}
         <div className="animate-[fadeUp_0.6s_ease_both]">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#C8963E]/12 border border-[#C8963E]/25 rounded-full text-xs font-bold tracking-[0.1em] uppercase text-[#E4B86A] mb-7">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#C8963E]/12 border border-[#C8963E]/25 rounded-full text-xs font-bold tracking-widest uppercase text-[#E4B86A] mb-7">
             <span className="w-1.5 h-1.5 rounded-full bg-[#C8963E] animate-pulse" />
             Web-Based Office Automation
           </div>
@@ -79,7 +79,7 @@ export default function Hero() {
             <span className="text-[#C8963E]">Automated.</span>
           </h1>
 
-          <p className="text-[17px] text-white/60 leading-[1.75] max-w-[500px] mb-9">
+          <p className="text-[17px] text-white/60 leading-[1.75] max-w-125 mb-9">
             A comprehensive digital platform automating membership registration,
             loan management, savings tracking, and financial reporting for First
             Choice Credit Union.
@@ -89,7 +89,7 @@ export default function Hero() {
           <div className="flex flex-wrap gap-4 mb-12">
             <Link
               href="/dashboard"
-              className="inline-flex items-center gap-2 px-7 py-3.5 bg-gradient-to-r from-[#C8963E] to-[#E4B86A] text-[#0B1D3A] font-bold text-[15px] rounded-xl shadow-[0_6px_24px_rgba(200,150,62,0.4)] hover:-translate-y-0.5 hover:shadow-[0_10px_32px_rgba(200,150,62,0.55)] transition-all duration-250"
+              className="inline-flex items-center gap-2 px-7 py-3.5 bg-linear-to-r from-[#C8963E] to-[#E4B86A] text-[#0B1D3A] font-bold text-[15px] rounded-xl shadow-[0_6px_24px_rgba(200,150,62,0.4)] hover:-translate-y-0.5 hover:shadow-[0_10px_32px_rgba(200,150,62,0.55)] transition-all duration-250"
             >
               🚀 Access Dashboard
             </Link>
@@ -168,11 +168,11 @@ export default function Hero() {
                 <p className="text-[11px] text-white/35 mb-2.5">
                   Monthly Collections
                 </p>
-                <div className="flex items-end gap-1.5 h-[60px]">
+                <div className="flex items-end gap-1.5 h-15">
                   {BAR_HEIGHTS.map((h, i) => (
                     <div
                       key={i}
-                      className="flex-1 rounded-t bg-gradient-to-t from-[#C8963E] to-[#E4B86A] opacity-70"
+                      className="flex-1 rounded-t bg-linear-to-t from-[#C8963E] to-[#E4B86A] opacity-70"
                       style={{ height: `${h}%` }}
                     />
                   ))}
@@ -186,7 +186,7 @@ export default function Hero() {
                     key={row.initials}
                     className={`flex items-center gap-3 py-2.5 ${i < PREVIEW_ROWS.length - 1 ? "border-b border-white/4" : ""}`}
                   >
-                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#C8963E] to-[#1A3560] flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0">
+                    <div className="w-7 h-7 rounded-full bg-linear-to-br from-[#C8963E] to-[#1A3560] flex items-center justify-center text-[10px] font-bold text-white shrink-0">
                       {row.initials}
                     </div>
                     <div className="flex-1 min-w-0">

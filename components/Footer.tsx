@@ -33,7 +33,7 @@ export default function Footer() {
           {/* Brand column */}
           <div>
             <Link href="/" className="flex items-center gap-3 mb-5">
-              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#C8963E] to-[#E4B86A] flex items-center justify-center font-serif font-black text-lg text-[#0B1D3A] shadow-[0_4px_12px_rgba(200,150,62,0.35)]">
+              <div className="w-11 h-11 rounded-xl bg-linear-to-br from-[#C8963E] to-[#E4B86A] flex items-center justify-center font-serif font-black text-lg text-[#0B1D3A] shadow-[0_4px_12px_rgba(200,150,62,0.35)]">
                 FC
               </div>
               <div className="flex flex-col leading-tight">
@@ -45,7 +45,7 @@ export default function Footer() {
                 </span>
               </div>
             </Link>
-            <p className="text-sm text-white/45 leading-[1.75] max-w-[280px]">
+            <p className="text-sm text-white/45 leading-[1.75] max-w-70">
               A web-based office automation system developed as a Computer
               Science Final Year Project to digitise the operations of First
               Choice Credit Union.
@@ -61,7 +61,7 @@ export default function Footer() {
           {/* Link columns */}
           {Object.entries(FOOTER_LINKS).map(([title, links]) => (
             <div key={title}>
-              <h4 className="text-xs font-bold tracking-[0.1em] uppercase text-[#E4B86A] mb-5">
+              <h4 className="text-xs font-bold tracking-widest uppercase text-[#E4B86A] mb-5">
                 {title}
               </h4>
               <ul className="space-y-3">

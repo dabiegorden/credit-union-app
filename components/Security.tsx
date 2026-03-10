@@ -38,7 +38,7 @@ export default function Security() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
           {/* ── Left: Text ── */}
           <div>
-            <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.1em] uppercase text-[#C8963E] mb-4">
+            <span className="inline-flex items-center gap-2 text-xs font-bold tracking-widest uppercase text-[#C8963E] mb-4">
               <span className="block w-6 h-0.5 bg-[#C8963E] rounded-full" />
               Data Protection
             </span>
@@ -55,7 +55,7 @@ export default function Security() {
             <div className="space-y-6">
               {SECURITY_ITEMS.map((item) => (
                 <div key={item.name} className="flex gap-4 items-start">
-                  <div className="w-11 h-11 rounded-xl bg-[#0B1D3A] flex items-center justify-center text-lg flex-shrink-0">
+                  <div className="w-11 h-11 rounded-xl bg-[#0B1D3A] flex items-center justify-center text-lg shrink-0">
                     {item.icon}
                   </div>
                   <div>
@@ -72,7 +72,7 @@ export default function Security() {
           </div>
 
           {/* ── Right: Shield Visual ── */}
-          <div className="bg-[#0B1D3A] rounded-[20px] p-9 relative overflow-hidden">
+          <div className="bg-[#0B1D3A] rounded-4xl p-9 relative overflow-hidden">
             {/* Background glow */}
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(200,150,62,0.1),transparent_60%)] pointer-events-none" />
 
@@ -94,7 +94,7 @@ export default function Security() {
                   key={check}
                   className="flex items-center gap-3 px-4 py-2.5 bg-white/5 rounded-lg text-sm text-white/65"
                 >
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0" />
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
                   {check}
                 </div>
               ))}

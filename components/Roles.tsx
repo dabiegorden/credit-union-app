@@ -53,7 +53,7 @@ export default function Roles() {
       <div className="max-w-7xl mx-auto px-6">
         {/* Header */}
         <div className="mb-14">
-          <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.1em] uppercase text-[#C8963E] mb-4">
+          <span className="inline-flex items-center gap-2 text-xs font-bold tracking-widest uppercase text-[#C8963E] mb-4">
             <span className="block w-6 h-0.5 bg-[#C8963E] rounded-full" />
             User Access Control
           </span>
@@ -62,7 +62,7 @@ export default function Roles() {
             <br />
             in Your Organisation
           </h2>
-          <p className="text-[17px] text-gray-500 leading-relaxed max-w-[560px]">
+          <p className="text-[17px] text-gray-500 leading-relaxed max-w-140">
             Three distinct access levels ensure every user sees and does exactly
             what they need — nothing more.
           </p>
@@ -73,7 +73,7 @@ export default function Roles() {
           {ROLES.map((role) => (
             <div
               key={role.name}
-              className={`${role.cardClass} ${role.accentGlow} rounded-[20px] p-8 text-white relative overflow-hidden hover:-translate-y-1 transition-transform duration-300`}
+              className={`${role.cardClass} ${role.accentGlow} rounded-4xl p-8 text-white relative overflow-hidden hover:-translate-y-1 transition-transform duration-300`}
             >
               {/* Decorative corner circle */}
               <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-[#C8963E]/6 pointer-events-none" />
@@ -96,7 +96,7 @@ export default function Roles() {
                     key={perm}
                     className="flex items-start gap-2.5 text-[13px] text-white/70"
                   >
-                    <span className="text-[#C8963E] font-bold text-xs mt-0.5 flex-shrink-0">
+                    <span className="text-[#C8963E] font-bold text-xs mt-0.5 shrink-0">
                       ✓
                     </span>
                     {perm}

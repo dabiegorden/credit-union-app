@@ -37,7 +37,7 @@ export default function Features() {
       <div className="max-w-7xl mx-auto px-6">
         {/* Header */}
         <div className="mb-14">
-          <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.1em] uppercase text-[#C8963E] mb-4">
+          <span className="inline-flex items-center gap-2 text-xs font-bold tracking-widest uppercase text-[#C8963E] mb-4">
             <span className="block w-6 h-0.5 bg-[#C8963E] rounded-full" />
             Platform Capabilities
           </span>
@@ -45,7 +45,7 @@ export default function Features() {
             Everything You Need to Run
             <br />a Modern Credit Union
           </h2>
-          <p className="text-[17px] text-gray-500 leading-relaxed max-w-[560px]">
+          <p className="text-[17px] text-gray-500 leading-relaxed max-w-140">
             Built with modern web technologies to give your staff and members a
             seamless digital banking experience.
           </p>
@@ -58,11 +58,11 @@ export default function Features() {
               key={f.name}
               className="group relative bg-[#FAF6EF] border-[1.5px] border-transparent hover:border-[#C8963E] rounded-2xl p-8 hover:-translate-y-1 hover:shadow-[0_12px_40px_rgba(11,29,58,0.12)] transition-all duration-300 overflow-hidden"
             >
-              {/* Hover gradient overlay */}
-              <div className="absolute inset-0 bg-gradient-to-br from-[#C8963E]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-2xl" />
+              {/* Hover linear overlay */}
+              <div className="absolute inset-0 bg-linear-to-br from-[#C8963E]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-2xl" />
 
               {/* Icon */}
-              <div className="relative w-14 h-14 rounded-[14px] bg-gradient-to-br from-[#0B1D3A] to-[#1A3560] flex items-center justify-center text-2xl mb-5 shadow-[0_6px_20px_rgba(11,29,58,0.25)]">
+              <div className="relative w-14 h-14 rounded-[14px] bg-linear-to-br from-[#0B1D3A] to-[#1A3560] flex items-center justify-center text-2xl mb-5 shadow-[0_6px_20px_rgba(11,29,58,0.25)]">
                 {f.icon}
               </div>
 

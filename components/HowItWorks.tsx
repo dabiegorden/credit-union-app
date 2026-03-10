@@ -32,12 +32,12 @@ export default function HowItWorks() {
       className="py-24 bg-[#0B1D3A] relative overflow-hidden"
     >
       {/* Subtle background glow */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_100%,rgba(200,150,62,0.07),transparent)]" />
+      <div className="absolute inset-0 bg-[radial-linear(ellipse_80%_50%_at_50%_100%,rgba(200,150,62,0.07),transparent)]" />
 
       <div className="relative z-10 max-w-7xl mx-auto px-6">
         {/* Header */}
         <div className="mb-16">
-          <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.1em] uppercase text-[#E4B86A] mb-4">
+          <span className="inline-flex items-center gap-2 text-xs font-bold tracking-widest uppercase text-[#E4B86A] mb-4">
             <span className="block w-6 h-0.5 bg-[#C8963E] rounded-full" />
             Simple Process
           </span>
@@ -46,7 +46,7 @@ export default function HowItWorks() {
             <br />
             in Four Simple Steps
           </h2>
-          <p className="text-[17px] text-white/55 leading-relaxed max-w-[560px]">
+          <p className="text-[17px] text-white/55 leading-relaxed max-w-140">
             The system guides staff through every workflow with clear,
             structured steps that minimise errors and save time.
           </p>
@@ -55,7 +55,7 @@ export default function HowItWorks() {
         {/* Steps */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 relative">
           {/* Connector line (desktop only) */}
-          <div className="hidden lg:block absolute top-9 left-[calc(12.5%+16px)] right-[calc(12.5%+16px)] h-px bg-gradient-to-r from-transparent via-[#C8963E]/30 to-transparent" />
+          <div className="hidden lg:block absolute top-9 left-[calc(12.5%+16px)] right-[calc(12.5%+16px)] h-px bg-linear-to-r from-transparent via-[#C8963E]/30 to-transparent" />
 
           {STEPS.map((step, i) => (
             <div
@@ -63,7 +63,7 @@ export default function HowItWorks() {
               className="flex flex-col items-center text-center group"
             >
               {/* Number circle */}
-              <div className="relative w-[72px] h-[72px] rounded-full bg-[#C8963E]/10 border-2 border-[#C8963E]/30 flex items-center justify-center mb-5 z-10 group-hover:bg-[#C8963E]/20 group-hover:border-[#C8963E]/60 transition-all duration-300">
+              <div className="relative w-18 h-18 rounded-full bg-[#C8963E]/10 border-2 border-[#C8963E]/30 flex items-center justify-center mb-5 z-10 group-hover:bg-[#C8963E]/20 group-hover:border-[#C8963E]/60 transition-all duration-300">
                 <span className="font-serif text-[26px] font-black text-[#C8963E]">
                   {step.number}
                 </span>

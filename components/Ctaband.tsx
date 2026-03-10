@@ -2,12 +2,12 @@ import Link from "next/link";
 
 export default function CTABand() {
   return (
-    <section className="relative py-24 bg-gradient-to-br from-[#0B1D3A] to-[#1A3560] overflow-hidden">
+    <section className="relative py-24 bg-linear-to-br from-[#0B1D3A] to-[#1A3560] overflow-hidden">
       {/* Background glows */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,rgba(200,150,62,0.1),transparent_50%),radial-gradient(circle_at_80%_50%,rgba(200,150,62,0.07),transparent_50%)] pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-linear(circle_at_20%_50%,rgba(200,150,62,0.1),transparent_50%),radial-linear(circle_at_80%_50%,rgba(200,150,62,0.07),transparent_50%)] pointer-events-none" />
 
       <div className="relative z-10 max-w-3xl mx-auto px-6 text-center">
-        <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.1em] uppercase text-[#E4B86A] mb-6">
+        <span className="inline-flex items-center gap-2 text-xs font-bold tracking-widest uppercase text-[#E4B86A] mb-6">
           <span className="block w-6 h-0.5 bg-[#C8963E] rounded-full" />
           Get Started Today
           <span className="block w-6 h-0.5 bg-[#C8963E] rounded-full" />
@@ -27,7 +27,7 @@ export default function CTABand() {
         <div className="flex justify-center flex-wrap gap-4">
           <Link
             href="/dashboard"
-            className="inline-flex items-center gap-2 px-8 py-3.5 bg-gradient-to-r from-[#C8963E] to-[#E4B86A] text-[#0B1D3A] font-bold text-[15px] rounded-xl shadow-[0_6px_24px_rgba(200,150,62,0.4)] hover:-translate-y-0.5 hover:shadow-[0_10px_32px_rgba(200,150,62,0.55)] transition-all duration-200"
+            className="inline-flex items-center gap-2 px-8 py-3.5 bg-linear-to-r from-[#C8963E] to-[#E4B86A] text-[#0B1D3A] font-bold text-[15px] rounded-xl shadow-[0_6px_24px_rgba(200,150,62,0.4)] hover:-translate-y-0.5 hover:shadow-[0_10px_32px_rgba(200,150,62,0.55)] transition-all duration-200"
           >
             🚀 Access the System
           </Link>

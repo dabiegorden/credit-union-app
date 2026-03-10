@@ -43,7 +43,7 @@ export default function Modules() {
       <div className="max-w-7xl mx-auto px-6">
         {/* Header */}
         <div className="mb-14">
-          <span className="inline-flex items-center gap-2 text-xs font-bold tracking-[0.1em] uppercase text-[#C8963E] mb-4">
+          <span className="inline-flex items-center gap-2 text-xs font-bold tracking-widest uppercase text-[#C8963E] mb-4">
             <span className="block w-6 h-0.5 bg-[#C8963E] rounded-full" />
             System Modules
           </span>
@@ -52,7 +52,7 @@ export default function Modules() {
             <br />
             Across Every Department
           </h2>
-          <p className="text-[17px] text-gray-500 leading-relaxed max-w-[560px]">
+          <p className="text-[17px] text-gray-500 leading-relaxed max-w-140">
             Each module is purpose-built to digitise and streamline a specific
             administrative function of the credit union.
           </p>
@@ -66,7 +66,7 @@ export default function Modules() {
               className="bg-white border-[1.5px] border-gray-200 rounded-2xl p-7 flex gap-5 items-start hover:border-[#C8963E] hover:shadow-[0_4px_20px_rgba(11,29,58,0.1)] hover:-translate-y-0.5 transition-all duration-300 group"
             >
               {/* Icon */}
-              <div className="w-[52px] h-[52px] rounded-xl bg-gradient-to-br from-[#C8963E] to-[#E4B86A] flex items-center justify-center text-[22px] flex-shrink-0 shadow-[0_4px_12px_rgba(200,150,62,0.3)] group-hover:shadow-[0_6px_18px_rgba(200,150,62,0.45)] transition-shadow duration-300">
+              <div className="w-13 h-13 rounded-xl bg-linear-to-br from-[#C8963E] to-[#E4B86A] flex items-center justify-center text-[22px] shrink-0 shadow-[0_4px_12px_rgba(200,150,62,0.3)] group-hover:shadow-[0_6px_18px_rgba(200,150,62,0.45)] transition-shadow duration-300">
                 {mod.icon}
               </div>
 
