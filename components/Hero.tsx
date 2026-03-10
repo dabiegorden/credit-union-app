@@ -88,7 +88,7 @@ export default function Hero() {
           {/* CTAs */}
           <div className="flex flex-wrap gap-4 mb-12">
             <Link
-              href="/dashboard"
+              href="/register"
               className="inline-flex items-center gap-2 px-7 py-3.5 bg-linear-to-r from-[#C8963E] to-[#E4B86A] text-[#0B1D3A] font-bold text-[15px] rounded-xl shadow-[0_6px_24px_rgba(200,150,62,0.4)] hover:-translate-y-0.5 hover:shadow-[0_10px_32px_rgba(200,150,62,0.55)] transition-all duration-250"
             >
               🚀 Access Dashboard

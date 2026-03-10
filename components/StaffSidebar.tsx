@@ -14,21 +14,13 @@ import {
 } from "@/components/ui/sidebar";
 import {
   BarChart3,
-  TrendingUp,
-  BookOpen,
   Users,
-  Hand,
   User,
   LogOut,
   Settings,
-  UserPlus,
-  Wallet,
-  ArrowDownCircle,
-  ArrowUpCircle,
-  ClipboardList,
-  Landmark,
+  DollarSign,
+  Users2,
   FileText,
-  UserCog,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -63,11 +55,10 @@ export const staffMenuItems = [
   {
     title: "Members",
     items: [
-      { title: "All Members", url: "/staff-dashboard/members", icon: Users },
       {
-        title: "Register Member",
-        url: "/staff-dashboard/members/register",
-        icon: UserPlus,
+        title: "Members Management",
+        url: "/staff-dashboard/members",
+        icon: Users2,
       },
     ],
   },
@@ -75,28 +66,33 @@ export const staffMenuItems = [
     title: "Savings",
     items: [
       {
-        title: "Deposits",
+        title: "Deposits | Withdrawals",
         url: "/staff-dashboard/deposits",
-        icon: ArrowDownCircle,
-      },
-      {
-        title: "Withdrawals",
-        url: "/staff-dashboard/withdrawals",
-        icon: ArrowUpCircle,
+        icon: DollarSign,
       },
     ],
   },
   {
-    title: "Loans",
+    title: "Loans Managements",
     items: [
       {
-        title: "Loan Applications",
-        url: "/staff-dashboard/loans/apply",
-        icon: Landmark,
+        title: "Loan",
+        url: "/staff-dashboard/loans",
+        icon: DollarSign,
+      },
+    ],
+  },
+  {
+    title: "Reports",
+    items: [
+      {
+        title: "Transaction Reports",
+        url: "/staff-dashboard/reports-transactions",
+        icon: FileText,
       },
       {
-        title: "Loan Repayments",
-        url: "/staff-dashboard/loans/repayments",
+        title: "Loan Reports",
+        url: "/staff-dashboard/reports-loans",
         icon: FileText,
       },
     ],

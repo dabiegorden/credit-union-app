@@ -16,15 +16,12 @@ import {
   Users,
   Wallet,
   CreditCard,
-  TrendingUp,
-  TrendingDown,
   ArrowUpRight,
   ArrowDownRight,
   AlertTriangle,
   RefreshCw,
   Loader2,
   ArrowDownCircle,
-  ArrowUpCircle,
   CheckCircle2,
   Clock,
   Banknote,
@@ -35,6 +32,7 @@ import {
   ChevronRight,
   CircleDot,
   BarChart3,
+  ArrowUpCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow, format } from "date-fns";
@@ -475,7 +473,7 @@ function Skeleton({ h = 20, r = 8 }: { h?: number; r?: number }) {
 /* ═══════════════════════════════════════════════════════════════════════════
    MAIN PAGE
 ═══════════════════════════════════════════════════════════════════════════ */
-export default function AdminDashboard() {
+export default function StaffDashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [spinning, setSpinning] = useState(false);
@@ -593,10 +591,10 @@ export default function AdminDashboard() {
             }}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-[#C8963E] animate-pulse" />
-            Admin Dashboard
+            Staff Dashboard
           </div>
           <h1 className="font-serif font-black text-white text-2xl sm:text-3xl">
-            Welcome Back, <span style={{ color: "#E4B86A" }}>Admin</span>
+            Welcome Back, <span style={{ color: "#E4B86A" }}>Staff</span>
           </h1>
           <p
             className="text-sm mt-1"
@@ -751,7 +749,7 @@ export default function AdminDashboard() {
           <SectionHeader
             title="Transaction Volume — Last 30 Days"
             subtitle={`This month: ${fmt(savings.depositsThisMonth)} deposits · ${fmt(savings.withdrawalsThisMonth)} withdrawals`}
-            href="/admin-dashboard/savings/deposits"
+            href="/staff-dashboard/deposits"
           />
           {sparklineData.length === 0 ? (
             <div
@@ -871,7 +869,7 @@ export default function AdminDashboard() {
           <SectionHeader
             title="Loan Portfolio"
             subtitle={`${loans.total} total applications`}
-            href="/admin-dashboard/loans/applications"
+            href="/staff-dashboard/loans"
           />
 
           {/* Big numbers */}
@@ -991,7 +989,7 @@ export default function AdminDashboard() {
           <SectionHeader
             title="Savings Accounts"
             subtitle={`${savings.totalAccounts} accounts total`}
-            href="/admin-dashboard/savings"
+            href="/staff-dashboard/savings"
           />
 
           {/* Balance hero */}
@@ -1137,7 +1135,7 @@ export default function AdminDashboard() {
           <SectionHeader
             title="Member Overview"
             subtitle={`${members.total} registered members`}
-            href="/admin-dashboard/members"
+            href="/staff-dashboard/members"
           />
 
           {/* Radial-style donut */}
@@ -1249,23 +1247,18 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-2 gap-2">
             {[
               {
-                label: "All Members",
-                href: "/admin-dashboard/all-members",
-                icon: Users,
-              },
-              {
                 label: "Savings Accts",
-                href: "/admin-dashboard/savings",
+                href: "/staff-dashboard/savings",
                 icon: Wallet,
               },
               {
                 label: "Loan Apps",
-                href: "/admin-dashboard/loans/applications",
+                href: "/staff-dashboard/loans",
                 icon: FileText,
               },
               {
                 label: "Reports",
-                href: "/admin-dashboard/reports/transactions",
+                href: "/staff-dashboard/reports-transactions",
                 icon: BarChart3,
               },
             ].map(({ label, href, icon: Icon }) => (
@@ -1359,21 +1352,21 @@ export default function AdminDashboard() {
                   label: "Overdue Loans",
                   count: alerts.overdueLoansCount,
                   color: "#fb923c",
-                  href: "/admin-dashboard/loans/applications?status=overdue",
+                  href: "/staff-dashboard/loans/applications?status=overdue",
                 },
                 {
                   icon: Clock,
                   label: "Pending Applications",
                   count: alerts.pendingApplicationsCount,
                   color: "#E4B86A",
-                  href: "/admin-dashboard/loans/applications?status=pending",
+                  href: "/staff-dashboard/loans/applications?status=pending",
                 },
                 {
                   icon: ShieldAlert,
                   label: "Dormant Accounts",
                   count: alerts.dormantAccountsCount,
                   color: "#60a5fa",
-                  href: "/admin-dashboard/savings",
+                  href: "/staff-dashboard/savings",
                 },
               ].map(({ icon: Icon, label, count, color, href }) => (
                 <Link
@@ -1528,7 +1521,7 @@ export default function AdminDashboard() {
           <SectionHeader
             title="Recent Transactions"
             subtitle="Latest savings activity"
-            href="/admin-dashboard/savings/deposits"
+            href="/staff-dashboard/deposits"
           />
 
           {recentTx.length === 0 ? (
@@ -1625,7 +1618,7 @@ export default function AdminDashboard() {
           <SectionHeader
             title="Recent Loan Applications"
             subtitle="Latest submissions"
-            href="/admin-dashboard/loans/applications"
+            href="/staff-dashboard/loans/applications"
           />
 
           {recentLoans.length === 0 ? (
