@@ -1,16 +1,17 @@
 /**
- * GET  /api/loans          — list loans (paginated + filtered)
- * POST /api/loans          — submit a loan application
+ * GET /api/loans  — list loans (paginated + filtered)
+ * POST /api/loans — submit a loan application
  *
- * Roles:
- *   Admin / Staff  — can list all loans, apply on behalf of a member
- *   Member         — lists only their own loans, applies for themselves
+ * KEY FIX: Member lookup now uses the same email-fallback strategy
+ * as the members API, so members whose Member document lacks a userId
+ * can still apply for and view loans.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Loan from "@/models/Loan";
 import Member from "@/models/Member";
+import User from "@/models/User";
 import SavingsAccount from "@/models/Savingsaccount";
 import SavingsTransaction from "@/models/Savingstransaction";
 import { authMiddleware } from "@/middleware/Authmiddleware";
@@ -19,6 +20,31 @@ import {
   calcRepaymentSchedule,
 } from "@/models/LoanEligibility";
 import { z } from "zod";
+import mongoose from "mongoose";
+
+/* ── Shared member resolver (same pattern as /api/members) ── */
+async function resolveMemberForUser(userId: string) {
+  let member = null;
+  if (mongoose.isValidObjectId(userId)) {
+    member = await Member.findOne({
+      userId: new mongoose.Types.ObjectId(userId),
+    });
+  }
+  if (!member) {
+    const user = await User.findById(userId).select("email").lean();
+    const email = (user as { email?: string } | null)?.email;
+    if (email) {
+      member = await Member.findOne({ email });
+      if (member && !member.userId) {
+        await Member.findByIdAndUpdate(member._id, {
+          userId: new mongoose.Types.ObjectId(userId),
+        });
+        member.userId = new mongoose.Types.ObjectId(userId) as any;
+      }
+    }
+  }
+  return member;
+}
 
 /* ── Validation schema ── */
 const applySchema = z.object({
@@ -36,7 +62,6 @@ const applySchema = z.object({
   ]),
   purposeDescription: z.string().trim().max(500).optional(),
   notes: z.string().trim().max(500).optional(),
-  // Optional override — admin/staff can override the system rate
   interestRateOverride: z.number().min(0).max(100).optional(),
 });
 
@@ -54,7 +79,7 @@ export async function GET(request: NextRequest) {
       100,
       Math.max(1, parseInt(searchParams.get("limit") || "20")),
     );
-    const status = searchParams.get("status") || ""; // pending|active|paid|rejected|...
+    const status = searchParams.get("status") || "";
     const search = searchParams.get("search")?.trim() || "";
     const from = searchParams.get("from") || "";
     const to = searchParams.get("to") || "";
@@ -63,7 +88,7 @@ export async function GET(request: NextRequest) {
 
     /* Member sees only their own loans */
     if (auth.user?.role === "member") {
-      const member = await Member.findOne({ userId: auth.user.userId });
+      const member = await resolveMemberForUser(auth.user.userId);
       if (!member) {
         return NextResponse.json(
           { error: "Member profile not found" },
@@ -72,7 +97,6 @@ export async function GET(request: NextRequest) {
       }
       query.memberId = member._id;
     } else {
-      // Staff/Admin: optional filter by memberId
       const memberId = searchParams.get("memberId");
       if (memberId) query.memberId = memberId;
     }
@@ -86,7 +110,6 @@ export async function GET(request: NextRequest) {
       query.applicationDate = range;
     }
 
-    /* Search by member name / memberId / loanId — join-style via Member */
     if (search && auth.user?.role !== "member") {
       const matchingMembers = await Member.find({
         $or: [
@@ -170,8 +193,8 @@ export async function POST(request: NextRequest) {
     /* ── Resolve member ── */
     let member;
     if (auth.user?.role === "member") {
-      // Members can only apply for themselves — ignore passed memberId
-      member = await Member.findOne({ userId: auth.user.userId });
+      // Members can only apply for themselves — use the resolver
+      member = await resolveMemberForUser(auth.user.userId);
     } else {
       member = await Member.findById(memberId);
     }
@@ -254,7 +277,7 @@ export async function POST(request: NextRequest) {
       completedLoans,
       defaultedLoans,
       activeLoans,
-      pendingLoans: 0, // already checked above
+      pendingLoans: 0,
     });
 
     /* ── Members must be eligible (score >= 50) ── */
@@ -300,7 +323,6 @@ export async function POST(request: NextRequest) {
 
     await loan.save();
 
-    /* Populate for response */
     await loan.populate("memberId", "memberId firstName lastName email");
     await loan.populate("appliedBy", "name email role");
 

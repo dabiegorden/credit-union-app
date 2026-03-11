@@ -1248,7 +1248,7 @@ export default function StaffDashboard() {
             {[
               {
                 label: "Savings Accts",
-                href: "/staff-dashboard/savings",
+                href: "/staff-dashboard/deposits",
                 icon: Wallet,
               },
               {
@@ -1352,21 +1352,21 @@ export default function StaffDashboard() {
                   label: "Overdue Loans",
                   count: alerts.overdueLoansCount,
                   color: "#fb923c",
-                  href: "/staff-dashboard/loans/applications?status=overdue",
+                  href: "/staff-dashboard/loans?status=overdue",
                 },
                 {
                   icon: Clock,
                   label: "Pending Applications",
                   count: alerts.pendingApplicationsCount,
                   color: "#E4B86A",
-                  href: "/staff-dashboard/loans/applications?status=pending",
+                  href: "/staff-dashboard/loans?status=pending",
                 },
                 {
                   icon: ShieldAlert,
                   label: "Dormant Accounts",
                   count: alerts.dormantAccountsCount,
                   color: "#60a5fa",
-                  href: "/staff-dashboard/savings",
+                  href: "/staff-dashboard/deposits",
                 },
               ].map(({ icon: Icon, label, count, color, href }) => (
                 <Link

@@ -29,6 +29,7 @@ import {
   Landmark,
   FileText,
   UserCog,
+  DollarSign,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -57,38 +58,16 @@ interface MemberSidebarProps {
 export const menuItems = [
   {
     title: "Dashboard",
-    url: "/admin-dashboard",
+    url: "/member-dashboard",
     icon: BarChart3,
   },
-
   {
-    title: "Members",
+    title: "Accounts Management",
     items: [
       {
-        title: "Members Management",
-        url: "/admin-dashboard/members",
-        icon: Users,
-      },
-    ],
-  },
-
-  {
-    title: "Savings Management",
-    items: [
-      {
-        title: "Savings Accounts",
-        url: "/admin-dashboard/savings",
+        title: "Accounts Management",
+        url: "/member-dashboard/savings",
         icon: Wallet,
-      },
-      {
-        title: "Deposits",
-        url: "/admin-dashboard/savings/deposits",
-        icon: ArrowDownCircle,
-      },
-      {
-        title: "Withdrawals",
-        url: "/admin-dashboard/savings/withdrawals",
-        icon: ArrowUpCircle,
       },
     ],
   },
@@ -97,56 +76,19 @@ export const menuItems = [
     title: "Loan Management",
     items: [
       {
-        title: "Loan Applications",
-        url: "/admin-dashboard/loans/applications",
-        icon: ClipboardList,
-      },
-      {
-        title: "Active Loans",
-        url: "/admin-dashboard/loans",
+        title: "Loans",
+        url: "/member-dashboard/loans",
         icon: Landmark,
       },
       {
+        title: "Apply Loan",
+        url: "/member-dashboard/loans/apply",
+        icon: DollarSign,
+      },
+      {
         title: "Loan Repayments",
-        url: "/admin-dashboard/loans/repayments",
-        icon: FileText,
-      },
-    ],
-  },
-
-  {
-    title: "Reports",
-    items: [
-      {
-        title: "Transaction Reports",
-        url: "/admin-dashboard/reports/transactions",
-        icon: FileText,
-      },
-      {
-        title: "Loan Reports",
-        url: "/admin-dashboard/reports/loans",
-        icon: FileText,
-      },
-      {
-        title: "Member Reports",
-        url: "/admin-dashboard/reports/members",
-        icon: FileText,
-      },
-    ],
-  },
-
-  {
-    title: "Administration",
-    items: [
-      {
-        title: "Staff Management",
-        url: "/admin-dashboard/staff",
-        icon: UserCog,
-      },
-      {
-        title: "System Settings",
-        url: "/admin-dashboard/settings",
-        icon: Settings,
+        url: "/member-dashboard/repayments",
+        icon: DollarSign,
       },
     ],
   },

@@ -1,9 +1,17 @@
+/**
+ * FIXED: src/app/api/savings/accounts/route.ts
+ *
+ * KEY FIX: Uses email-fallback member resolution for the member GET path.
+ */
+
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { authMiddleware } from "@/middleware/Authmiddleware";
 import { z } from "zod";
 import Member from "@/models/Member";
+import User from "@/models/User";
 import Savingsaccount from "@/models/Savingsaccount";
+import mongoose from "mongoose";
 
 const createAccountSchema = z.object({
   memberId: z.string().min(1, "Member ID is required"),
@@ -12,9 +20,31 @@ const createAccountSchema = z.object({
   description: z.string().trim().optional(),
 });
 
+/** Resolve Member by userId OR email fallback */
+async function resolveMember(userId: string) {
+  let member = null;
+  if (mongoose.isValidObjectId(userId)) {
+    member = await Member.findOne({
+      userId: new mongoose.Types.ObjectId(userId),
+    });
+  }
+  if (!member) {
+    const user = await User.findById(userId).select("email").lean();
+    const email = (user as { email?: string } | null)?.email;
+    if (email) {
+      member = await Member.findOne({ email });
+      if (member && !member.userId) {
+        await Member.findByIdAndUpdate(member._id, {
+          userId: new mongoose.Types.ObjectId(userId),
+        });
+        member.userId = new mongoose.Types.ObjectId(userId) as any;
+      }
+    }
+  }
+  return member;
+}
+
 // ─── GET /api/savings/accounts ────────────────────────────────────────────────
-// Admin/Staff: all accounts with pagination + search
-// Member: their own accounts only
 export async function GET(request: NextRequest) {
   try {
     const auth = await authMiddleware(request);
@@ -26,12 +56,12 @@ export async function GET(request: NextRequest) {
     const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
     const limit = Math.max(1, parseInt(searchParams.get("limit") || "20"));
     const search = searchParams.get("search")?.trim() || "";
-    const status = searchParams.get("status") || ""; // active | dormant | closed
-    const type = searchParams.get("type") || ""; // regular | fixed | susu
+    const status = searchParams.get("status") || "";
+    const type = searchParams.get("type") || "";
 
     // Members can only see their own accounts
     if (auth.user?.role === "member") {
-      const member = await Member.findOne({ userId: auth.user.userId });
+      const member = await resolveMember(auth.user.userId);
       if (!member) {
         return NextResponse.json(
           { error: "Member profile not found" },
@@ -51,7 +81,6 @@ export async function GET(request: NextRequest) {
     if (status) query.status = status;
     if (type) query.accountType = type;
 
-    // If searching, first find matching members then filter by memberId
     if (search) {
       const matchingMembers = await Member.find({
         $or: [
@@ -119,7 +148,6 @@ export async function POST(request: NextRequest) {
 
     const { memberId, accountType, accountName, description } = parsed.data;
 
-    // Verify member exists and is active
     const member = await Member.findById(memberId);
     if (!member) {
       return NextResponse.json({ error: "Member not found" }, { status: 404 });
@@ -131,7 +159,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Prevent duplicate account type for same member
     const duplicate = await Savingsaccount.findOne({
       memberId,
       accountType,

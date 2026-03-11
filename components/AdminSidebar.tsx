@@ -76,6 +76,11 @@ export const menuItems = [
         url: "/admin-dashboard/members",
         icon: Users2,
       },
+      {
+        title: "Link a member",
+        url: "/admin-dashboard/link-member",
+        icon: Users2,
+      },
     ],
   },
 

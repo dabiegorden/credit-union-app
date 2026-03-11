@@ -26,13 +26,13 @@ export default function CTABand() {
 
         <div className="flex justify-center flex-wrap gap-4">
           <Link
-            href="/dashboard"
+            href="/register"
             className="inline-flex items-center gap-2 px-8 py-3.5 bg-linear-to-r from-[#C8963E] to-[#E4B86A] text-[#0B1D3A] font-bold text-[15px] rounded-xl shadow-[0_6px_24px_rgba(200,150,62,0.4)] hover:-translate-y-0.5 hover:shadow-[0_10px_32px_rgba(200,150,62,0.55)] transition-all duration-200"
           >
             🚀 Access the System
           </Link>
           <Link
-            href="/contact"
+            href="#contact"
             className="inline-flex items-center gap-2 px-8 py-3.5 text-white/80 font-semibold text-[15px] rounded-xl border border-white/20 hover:border-[#C8963E] hover:text-[#E4B86A] hover:bg-[#C8963E]/8 transition-all duration-200"
           >
             📩 Contact Administrator

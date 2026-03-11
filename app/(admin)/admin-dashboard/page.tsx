@@ -751,7 +751,7 @@ export default function AdminDashboard() {
           <SectionHeader
             title="Transaction Volume — Last 30 Days"
             subtitle={`This month: ${fmt(savings.depositsThisMonth)} deposits · ${fmt(savings.withdrawalsThisMonth)} withdrawals`}
-            href="/admin-dashboard/savings/deposits"
+            href="/admin-dashboard/deposits"
           />
           {sparklineData.length === 0 ? (
             <div
@@ -871,7 +871,7 @@ export default function AdminDashboard() {
           <SectionHeader
             title="Loan Portfolio"
             subtitle={`${loans.total} total applications`}
-            href="/admin-dashboard/loans/applications"
+            href="/admin-dashboard/loans"
           />
 
           {/* Big numbers */}
@@ -1260,12 +1260,12 @@ export default function AdminDashboard() {
               },
               {
                 label: "Loan Apps",
-                href: "/admin-dashboard/loans/applications",
+                href: "/admin-dashboard/loans",
                 icon: FileText,
               },
               {
                 label: "Reports",
-                href: "/admin-dashboard/reports/transactions",
+                href: "/admin-dashboard/reports-transactions",
                 icon: BarChart3,
               },
             ].map(({ label, href, icon: Icon }) => (
@@ -1359,14 +1359,14 @@ export default function AdminDashboard() {
                   label: "Overdue Loans",
                   count: alerts.overdueLoansCount,
                   color: "#fb923c",
-                  href: "/admin-dashboard/loans/applications?status=overdue",
+                  href: "/admin-dashboard/loans?status=overdue",
                 },
                 {
                   icon: Clock,
                   label: "Pending Applications",
                   count: alerts.pendingApplicationsCount,
                   color: "#E4B86A",
-                  href: "/admin-dashboard/loans/applications?status=pending",
+                  href: "/admin-dashboard/loans?status=pending",
                 },
                 {
                   icon: ShieldAlert,
@@ -1528,7 +1528,7 @@ export default function AdminDashboard() {
           <SectionHeader
             title="Recent Transactions"
             subtitle="Latest savings activity"
-            href="/admin-dashboard/savings/deposits"
+            href="/admin-dashboard/deposits"
           />
 
           {recentTx.length === 0 ? (
@@ -1625,7 +1625,7 @@ export default function AdminDashboard() {
           <SectionHeader
             title="Recent Loan Applications"
             subtitle="Latest submissions"
-            href="/admin-dashboard/loans/applications"
+            href="/admin-dashboard/loans"
           />
 
           {recentLoans.length === 0 ? (

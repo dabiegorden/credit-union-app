@@ -347,7 +347,12 @@ function DashboardContent({ children }: { children: ReactNode }) {
                     className="mr-2.5 h-4 w-4"
                     style={{ color: "#C8963E" }}
                   />
-                  <span className="font-medium">Profile Settings</span>
+                  <Link
+                    href={"/member-dashboard/profile"}
+                    className="font-medium"
+                  >
+                    Profile Settings
+                  </Link>
                 </DropdownMenuItem>
 
                 <DropdownMenuItem
