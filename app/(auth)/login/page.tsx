@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
-export default function LoginPage() {
+/* ---------------- LOGIN CONTENT (uses useSearchParams) ---------------- */
+
+function LoginContent() {
   const router = useRouter();
   const params = useSearchParams();
   const justRegistered = params.get("registered") === "true";
@@ -45,9 +47,9 @@ export default function LoginPage() {
         return;
       }
 
-      // data.role from /api/auth/me shape: { success, role, user: { id, name, email } }
       const dest =
         ROLE_DASHBOARD[data.user?.role ?? data.role] ?? "/member-dashboard";
+
       router.push(dest);
       toast.success("Login Successful");
     } catch {
@@ -59,26 +61,11 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen bg-[#0B1D3A] flex items-center justify-center px-4 py-16 relative overflow-hidden">
-      {/* Background layers */}
-      <div className="absolute inset-0 bg-[radial-linear(circle_at_75%_40%,rgba(200,150,62,0.08)_0%,transparent_50%),radial-linear(circle_at_20%_70%,rgba(26,53,96,0.6)_0%,transparent_50%)]" />
-      <div
-        className="absolute inset-0 opacity-30"
-        style={{
-          backgroundImage:
-            "linear-linear(rgba(200,150,62,0.06) 1px, transparent 1px), linear-linear(90deg, rgba(200,150,62,0.06) 1px, transparent 1px)",
-          backgroundSize: "60px 60px",
-          maskImage:
-            "radial-linear(ellipse 70% 70% at 50% 50%, black 0%, transparent 100%)",
-          WebkitMaskImage:
-            "radial-linear(ellipse 70% 70% at 50% 50%, black 0%, transparent 100%)",
-        }}
-      />
-
       <div className="relative z-10 w-full max-w-105 animate-[fadeUp_0.55s_ease_both]">
         {/* Logo */}
         <div className="flex justify-center mb-8">
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-12 h-12 rounded-xl bg-linear-to-br from-[#C8963E] to-[#E4B86A] flex items-center justify-center font-serif font-black text-lg text-[#0B1D3A] shadow-[0_4px_18px_rgba(200,150,62,0.45)] group-hover:shadow-[0_6px_24px_rgba(200,150,62,0.6)] transition-shadow duration-300">
+            <div className="w-12 h-12 rounded-xl bg-linear-to-br from-[#C8963E] to-[#E4B86A] flex items-center justify-center font-serif font-black text-lg text-[#0B1D3A]">
               FC
             </div>
             <div className="flex flex-col leading-tight">
@@ -93,14 +80,9 @@ export default function LoginPage() {
         </div>
 
         {/* Card */}
-        <div className="bg-[#122549] border border-[#C8963E]/20 rounded-2xl shadow-[0_24px_64px_rgba(11,29,58,0.6),0_0_80px_rgba(200,150,62,0.05)] overflow-hidden">
-          {/* Card header */}
+        <div className="bg-[#122549] border border-[#C8963E]/20 rounded-2xl shadow-lg overflow-hidden">
           <div className="px-8 pt-8 pb-6 border-b border-white/5">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#C8963E]/12 border border-[#C8963E]/25 rounded-full text-[10px] font-bold tracking-widest uppercase text-[#E4B86A] mb-4">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#C8963E] animate-pulse" />
-              Secure Access
-            </div>
-            <h1 className="font-serif text-[26px] font-black text-white leading-tight">
+            <h1 className="font-serif text-[26px] font-black text-white">
               Welcome <span className="text-[#E4B86A]">Back</span>
             </h1>
             <p className="text-sm text-white/45 mt-1">
@@ -109,10 +91,10 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="px-8 py-7 space-y-5">
-            {/* Success banner after registration */}
+            {/* Success banner */}
             {justRegistered && (
               <div className="flex items-center gap-2.5 px-4 py-3 bg-emerald-500/10 border border-emerald-500/25 rounded-xl text-sm text-emerald-300">
-                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <CheckCircle2 className="w-4 h-4" />
                 Account created! Please sign in.
               </div>
             )}
@@ -120,7 +102,7 @@ export default function LoginPage() {
             {/* Error */}
             {error && (
               <div className="flex items-center gap-2.5 px-4 py-3 bg-red-500/10 border border-red-500/25 rounded-xl text-sm text-red-300">
-                <AlertCircle className="w-4 h-4 shrink-0" />
+                <AlertCircle className="w-4 h-4" />
                 {error}
               </div>
             )}
@@ -133,57 +115,39 @@ export default function LoginPage() {
               <input
                 type="email"
                 required
-                autoComplete="email"
                 value={form.email}
                 onChange={set("email")}
-                placeholder="you@firstchoice.gh"
-                className="w-full bg-[#0B1D3A]/60 border border-white/10 focus:border-[#C8963E]/60 rounded-xl px-4 py-3 text-sm text-white placeholder-white/25 outline-none transition-all duration-200 focus:bg-[#0B1D3A]/80 focus:shadow-[0_0_0_3px_rgba(200,150,62,0.12)]"
+                className="w-full bg-[#0B1D3A]/60 border border-white/10 rounded-xl px-4 py-3 text-sm text-white"
               />
             </div>
 
             {/* Password */}
-            <div>
-              <div className="relative">
-                <input
-                  type={showPw ? "text" : "password"}
-                  required
-                  autoComplete="current-password"
-                  value={form.password}
-                  onChange={set("password")}
-                  placeholder="Enter your password"
-                  className="w-full bg-[#0B1D3A]/60 border border-white/10 focus:border-[#C8963E]/60 rounded-xl px-4 py-3 pr-11 text-sm text-white placeholder-white/25 outline-none transition-all duration-200 focus:bg-[#0B1D3A]/80 focus:shadow-[0_0_0_3px_rgba(200,150,62,0.12)]"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPw((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
-                >
-                  {showPw ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Divider with decorative element */}
-            <div className="relative py-1">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-white/6" />
-              </div>
-              <div className="relative flex justify-center">
-                <span className="bg-[#122549] px-3 text-[10px] text-white/20 tracking-widest uppercase">
-                  secure login
-                </span>
-              </div>
+            <div className="relative">
+              <input
+                type={showPw ? "text" : "password"}
+                required
+                value={form.password}
+                onChange={set("password")}
+                className="w-full bg-[#0B1D3A]/60 border border-white/10 rounded-xl px-4 py-3 pr-11 text-sm text-white"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPw((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30"
+              >
+                {showPw ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
+              </button>
             </div>
 
             {/* Submit */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-3.5 bg-linear-to-r from-[#C8963E] to-[#E4B86A] text-[#0B1D3A] font-bold text-[15px] rounded-xl shadow-[0_6px_24px_rgba(200,150,62,0.4)] hover:-translate-y-0.5 hover:shadow-[0_10px_32px_rgba(200,150,62,0.55)] transition-all duration-250 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+              className="w-full flex items-center justify-center gap-2 py-3.5 bg-linear-to-r from-[#C8963E] to-[#E4B86A] text-[#0B1D3A] font-bold rounded-xl"
             >
               {loading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -192,37 +156,34 @@ export default function LoginPage() {
               )}
             </button>
 
-            {/* Register link */}
-            <p className="text-center text-sm text-white/35 pt-1">
-              Don&apos;t have an account?{" "}
+            <p className="text-center text-sm text-white/35">
+              Don't have an account?{" "}
               <Link
                 href="/register"
-                className="text-[#E4B86A] hover:text-[#C8963E] font-semibold transition-colors"
+                className="text-[#E4B86A] hover:text-[#C8963E] font-semibold"
               >
                 Create one
               </Link>
             </p>
           </form>
         </div>
-
-        {/* Footer note */}
-        <p className="text-center text-[11px] text-white/20 mt-6 tracking-wide">
-          Protected by FCCU Security · © {new Date().getFullYear()}
-        </p>
       </div>
-
-      <style jsx>{`
-        @keyframes fadeUp {
-          from {
-            opacity: 0;
-            transform: translateY(24px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
     </main>
+  );
+}
+
+/* ---------------- PAGE WRAPPER WITH SUSPENSE ---------------- */
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-[#0B1D3A] text-white">
+          Loading...
+        </div>
+      }
+    >
+      <LoginContent />
+    </Suspense>
   );
 }
