@@ -67,7 +67,7 @@ export const menuItems = [
     title: "Members",
     items: [
       {
-        title: "All Members",
+        title: "All Users",
         url: "/admin-dashboard/all-members",
         icon: Users,
       },

@@ -236,7 +236,7 @@ function fmt(n: number) {
   return `GH₵${n.toLocaleString("en-GH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 function initials(m: PopulatedMember | MemberProfile) {
-  return (m.firstName[0] + m.lastName[0]).toUpperCase();
+  return (m?.firstName[0] + m?.lastName[0])?.toUpperCase();
 }
 function scoreColor(s: number) {
   if (s >= 70) return "#4ade80";

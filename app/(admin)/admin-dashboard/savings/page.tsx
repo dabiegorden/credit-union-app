@@ -134,7 +134,7 @@ function fmt(n: number) {
 }
 
 function initials(m: PopulatedMember) {
-  return (m.firstName[0] + m.lastName[0]).toUpperCase();
+  return (m?.firstName[0] + m?.lastName[0])?.toUpperCase();
 }
 
 /* ─── Modal Shell ─────────────────────────────────────────────────────────── */
