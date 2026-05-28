@@ -231,7 +231,7 @@ function Modal({
 }
 
 /* ─── Main ── */
-export default function MemberSavingsPage() {
+export default function ClientsSavingsPage() {
   const [accounts, setAccounts] = useState<SavingsAccount[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [pagination, setPagination] = useState<Pagination>({

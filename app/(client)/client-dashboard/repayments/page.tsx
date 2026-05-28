@@ -3,7 +3,7 @@
 /**
  * PLACE AT: src/app/member/repayments/page.tsx
  *
- * Members can:
+ * Clients can:
  *   - See all their active/overdue loans with outstanding balances
  *   - Make a repayment on any active or overdue loan
  *   - View their full repayment history across all loans
@@ -217,7 +217,7 @@ function RepayModal({
     if (isZero || isOverpay) return;
     setLoading(true);
     try {
-      const res = await fetch("/api/member/repayments", {
+      const res = await fetch("/api/loans/repayments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

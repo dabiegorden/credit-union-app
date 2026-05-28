@@ -40,9 +40,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { format, formatDistanceToNow } from "date-fns";
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
-interface PopulatedMember {
+interface PopulatedClient {
   _id: string;
-  memberId: string;
+  clientId: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -59,7 +59,7 @@ interface PopulatedUser {
 interface Loan {
   _id: string;
   loanId: string;
-  memberId: PopulatedMember;
+  clientId: PopulatedClient;
   applicationDate: string;
   loanAmount: number;
   interestRate: number;
@@ -106,9 +106,9 @@ type LoanPurpose =
   | "agriculture"
   | "other";
 
-interface MemberProfile {
+interface ClientProfile {
   _id: string;
-  memberId: string;
+  clientId: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -235,7 +235,7 @@ const CREDIT_META = {
 function fmt(n: number) {
   return `GH₵${n.toLocaleString("en-GH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
-function initials(m: PopulatedMember | MemberProfile) {
+function initials(m: PopulatedClient | ClientProfile) {
   return (m?.firstName[0] + m?.lastName[0])?.toUpperCase();
 }
 function scoreColor(s: number) {
@@ -437,7 +437,7 @@ function ScoreRing({ score, size = 64 }: { score: number; size?: number }) {
 /* ═══════════════════════════════════════════════════════════════════════════
    MAIN PAGE
 ═══════════════════════════════════════════════════════════════════════════ */
-export default function StaffLoanApplicationsPage() {
+export default function AdminLoanApplicationsPage() {
   const [loans, setLoans] = useState<Loan[]>([]);
   const [pagination, setPagination] = useState<Pagination>({
     total: 0,
@@ -459,10 +459,10 @@ export default function StaffLoanApplicationsPage() {
   const [selected, setSelected] = useState<Loan | null>(null);
 
   /* apply form */
-  const [allMembers, setAllMembers] = useState<MemberProfile[]>([]);
-  const [membersLoading, setMembersLoading] = useState(false);
-  const [memberFilter, setMemberFilter] = useState("");
-  const [chosenMember, setChosenMember] = useState<MemberProfile | null>(null);
+  const [allClients, setAllClients] = useState<ClientProfile[]>([]);
+  const [clientsLoading, setClientsLoading] = useState(false);
+  const [clientFilter, setClientFilter] = useState("");
+  const [chosenClient, setChosenClient] = useState<ClientProfile | null>(null);
   const [eligibility, setEligibility] = useState<EligibilityResult | null>(
     null,
   );
@@ -533,34 +533,34 @@ export default function StaffLoanApplicationsPage() {
     };
   }, [search, statusFilter, fromDate, toDate, fetchLoans]);
 
-  /* ── Fetch members ── */
-  const fetchAllMembers = useCallback(async () => {
-    setMembersLoading(true);
+  /* ── Fetch clients ── */
+  const fetchAllClients = useCallback(async () => {
+    setClientsLoading(true);
     try {
-      const res = await fetch("/api/members?limit=200&status=active", {
+      const res = await fetch("/api/clients?limit=200&status=active", {
         credentials: "include",
       });
       const data = await res.json();
-      setAllMembers(data.members ?? []);
+      setAllClients(data.clients ?? []);
     } catch {
-      toast.error("Could not load members");
+      toast.error("Could not load clients");
     } finally {
-      setMembersLoading(false);
+      setClientsLoading(false);
     }
   }, []);
 
-  /* ── Fetch eligibility when member + amount selected ── */
+  /* ── Fetch eligibility when client + amount selected ── */
   const fetchEligibility = useCallback(
-    async (member: MemberProfile, amount: string) => {
+    async (client: ClientProfile, amount: string) => {
       const amt = parseFloat(amount);
-      if (!member || !amt || amt <= 0) {
+      if (!client || !amt || amt <= 0) {
         setEligibility(null);
         return;
       }
       setEligLoading(true);
       try {
         const res = await fetch(
-          `/api/loans/eligibility?memberId=${member._id}&amount=${amt}`,
+          `/api/loans/eligibility?clientId=${client._id}&amount=${amt}`,
           { credentials: "include" },
         );
         const data = await res.json();
@@ -580,14 +580,14 @@ export default function StaffLoanApplicationsPage() {
   );
 
   useEffect(() => {
-    if (chosenMember && loanAmount) {
+    if (chosenClient && loanAmount) {
       const t = setTimeout(
-        () => fetchEligibility(chosenMember, loanAmount),
+        () => fetchEligibility(chosenClient, loanAmount),
         600,
       );
       return () => clearTimeout(t);
     }
-  }, [chosenMember, loanAmount, fetchEligibility]);
+  }, [chosenClient, loanAmount, fetchEligibility]);
 
   /* ── Derived stats ── */
   const stats = {
@@ -600,8 +600,8 @@ export default function StaffLoanApplicationsPage() {
 
   /* ── Reset apply form ── */
   const resetForm = () => {
-    setChosenMember(null);
-    setMemberFilter("");
+    setChosenClient(null);
+    setClientFilter("");
     setEligibility(null);
     setLoanAmount("");
     setLoanMonths("12");
@@ -625,8 +625,8 @@ export default function StaffLoanApplicationsPage() {
   /* ── Submit: apply for loan ── */
   const handleApply = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!chosenMember) {
-      toast.error("Select a member");
+    if (!chosenClient) {
+      toast.error("Select a client");
       return;
     }
     setFormLoading(true);
@@ -636,7 +636,7 @@ export default function StaffLoanApplicationsPage() {
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          memberId: chosenMember._id,
+          clientId: chosenClient._id,
           loanAmount: parseFloat(loanAmount),
           loanDurationMonths: parseInt(loanMonths),
           purpose: loanPurpose,
@@ -753,13 +753,13 @@ export default function StaffLoanApplicationsPage() {
             className="text-sm mt-1"
             style={{ color: "rgba(255,255,255,0.38)" }}
           >
-            Review, approve and track member loan applications
+            Review, approve and track client loan applications
           </p>
         </div>
         <button
           onClick={() => {
             resetForm();
-            fetchAllMembers();
+            fetchAllClients();
             setMode("apply");
           }}
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm shrink-0 transition-all hover:-translate-y-0.5"
@@ -839,7 +839,7 @@ export default function StaffLoanApplicationsPage() {
             style={{ color: "rgba(200,150,62,0.5)" }}
           />
           <input
-            placeholder="Search member name, ID or loan ID…"
+            placeholder="Search client name, ID or loan ID…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className={inputCls + " pl-10"}
@@ -940,7 +940,7 @@ export default function StaffLoanApplicationsPage() {
             color: "rgba(228,184,106,0.5)",
           }}
         >
-          <span>Member</span>
+          <span>Client</span>
           <span>Loan ID</span>
           <span>Amount</span>
           <span>Purpose</span>
@@ -975,7 +975,7 @@ export default function StaffLoanApplicationsPage() {
             <button
               onClick={() => {
                 resetForm();
-                fetchAllMembers();
+                fetchAllClients();
                 setMode("apply");
               }}
               className="text-xs font-bold"
@@ -1007,7 +1007,7 @@ export default function StaffLoanApplicationsPage() {
                   }
                   onMouseLeave={(e) => (e.currentTarget.style.background = "")}
                 >
-                  {/* Member */}
+                  {/* Client */}
                   <div className="flex items-center gap-3 min-w-0">
                     <div
                       className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs shrink-0"
@@ -1016,17 +1016,17 @@ export default function StaffLoanApplicationsPage() {
                         color: "#0B1D3A",
                       }}
                     >
-                      {initials(loan.memberId)}
+                      {initials(loan.clientId)}
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-white truncate">
-                        {loan.memberId.firstName} {loan.memberId.lastName}
+                        {loan.clientId.firstName} {loan.clientId.lastName}
                       </p>
                       <p
                         className="text-[10px] font-medium"
                         style={{ color: "#E4B86A" }}
                       >
-                        {loan.memberId.memberId}
+                        {loan.clientId.clientId}
                       </p>
                     </div>
                   </div>
@@ -1267,9 +1267,9 @@ export default function StaffLoanApplicationsPage() {
             extraWide
           >
             <form onSubmit={handleApply} className="space-y-5">
-              {/* Step 1: Member */}
-              <Field label="Step 1 — Select Member" required>
-                {chosenMember ? (
+              {/* Step 1: Client */}
+              <Field label="Step 1 — Select Client" required>
+                {chosenClient ? (
                   <div
                     className="flex items-center gap-3 p-3 rounded-xl"
                     style={{
@@ -1284,24 +1284,24 @@ export default function StaffLoanApplicationsPage() {
                         color: "#0B1D3A",
                       }}
                     >
-                      {initials(chosenMember)}
+                      {initials(chosenClient)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-white">
-                        {chosenMember.firstName} {chosenMember.lastName}
+                        {chosenClient.firstName} {chosenClient.lastName}
                       </p>
                       <p
                         className="text-[11px]"
                         style={{ color: "rgba(255,255,255,0.4)" }}
                       >
-                        {chosenMember.memberId} · Savings:{" "}
-                        {fmt(chosenMember.savingsBalance)}
+                        {chosenClient.clientId} · Savings:{" "}
+                        {fmt(chosenClient.savingsBalance)}
                       </p>
                     </div>
                     <button
                       type="button"
                       onClick={() => {
-                        setChosenMember(null);
+                        setChosenClient(null);
                         setEligibility(null);
                         setRateOverride("");
                       }}
@@ -1338,14 +1338,14 @@ export default function StaffLoanApplicationsPage() {
                         style={{ color: "rgba(200,150,62,0.5)" }}
                       />
                       <input
-                        placeholder="Filter members…"
-                        value={memberFilter}
-                        onChange={(e) => setMemberFilter(e.target.value)}
+                        placeholder="Filter clients…"
+                        value={clientFilter}
+                        onChange={(e) => setClientFilter(e.target.value)}
                         className="w-full bg-transparent pl-9 pr-4 py-2.5 text-sm text-white placeholder-white/20 outline-none"
                       />
                     </div>
                     <div className="overflow-y-auto" style={{ maxHeight: 190 }}>
-                      {membersLoading ? (
+                      {clientsLoading ? (
                         <div
                           className="flex items-center justify-center gap-2 py-6"
                           style={{ color: "rgba(255,255,255,0.3)" }}
@@ -1358,30 +1358,30 @@ export default function StaffLoanApplicationsPage() {
                         </div>
                       ) : (
                         (() => {
-                          const q = memberFilter.toLowerCase();
-                          const f = allMembers.filter(
-                            (m) =>
+                          const q = clientFilter.toLowerCase();
+                          const f = allClients.filter(
+                            (c) =>
                               !q ||
-                              `${m.firstName} ${m.lastName}`
+                              `${c.firstName} ${c.lastName}`
                                 .toLowerCase()
                                 .includes(q) ||
-                              m.memberId.toLowerCase().includes(q),
+                              c.clientId.toLowerCase().includes(q),
                           );
                           return f.length === 0 ? (
                             <p
                               className="text-center text-sm py-6"
                               style={{ color: "rgba(255,255,255,0.25)" }}
                             >
-                              No members
+                              No clients found
                             </p>
                           ) : (
-                            f.map((m, i) => (
+                            f.map((c, i) => (
                               <button
-                                key={m._id}
+                                key={c._id}
                                 type="button"
                                 onClick={() => {
-                                  setChosenMember(m);
-                                  setMemberFilter("");
+                                  setChosenClient(c);
+                                  setClientFilter("");
                                 }}
                                 className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors"
                                 style={{
@@ -1406,17 +1406,17 @@ export default function StaffLoanApplicationsPage() {
                                     color: "#0B1D3A",
                                   }}
                                 >
-                                  {initials(m)}
+                                  {initials(c)}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-bold text-white truncate">
-                                    {m.firstName} {m.lastName}
+                                    {c.firstName} {c.lastName}
                                   </p>
                                   <p
                                     className="text-[10px]"
                                     style={{ color: "rgba(255,255,255,0.38)" }}
                                   >
-                                    {m.memberId} · {fmt(m.savingsBalance)}
+                                    {c.clientId} · {fmt(c.savingsBalance)}
                                   </p>
                                 </div>
                                 <span
@@ -1560,7 +1560,7 @@ export default function StaffLoanApplicationsPage() {
               </Field>
 
               {/* Eligibility Panel */}
-              {chosenMember && loanAmount && (
+              {chosenClient && loanAmount && (
                 <div
                   className="rounded-xl overflow-hidden"
                   style={{ border: "1px solid rgba(200,150,62,0.18)" }}
@@ -1775,7 +1775,7 @@ export default function StaffLoanApplicationsPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={formLoading || !chosenMember || !loanAmount}
+                  disabled={formLoading || !chosenClient || !loanAmount}
                   className="flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all hover:-translate-y-0.5 disabled:opacity-50"
                   style={{
                     background: "linear-gradient(135deg,#C8963E,#E4B86A)",
@@ -1824,18 +1824,18 @@ export default function StaffLoanApplicationsPage() {
                         color: "#0B1D3A",
                       }}
                     >
-                      {initials(selected.memberId)}
+                      {initials(selected.clientId)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-serif font-black text-white text-lg">
-                        {selected.memberId.firstName}{" "}
-                        {selected.memberId.lastName}
+                        {selected.clientId.firstName}{" "}
+                        {selected.clientId.lastName}
                       </p>
                       <p
                         className="text-xs"
                         style={{ color: "rgba(255,255,255,0.4)" }}
                       >
-                        {selected.memberId.memberId} · Applied{" "}
+                        {selected.clientId.clientId} · Applied{" "}
                         {format(
                           new Date(selected.applicationDate),
                           "MMM d, yyyy",
@@ -2092,7 +2092,7 @@ export default function StaffLoanApplicationsPage() {
                     className="text-xs"
                     style={{ color: "rgba(255,255,255,0.4)" }}
                   >
-                    {selected.memberId.firstName} {selected.memberId.lastName} ·{" "}
+                    {selected.clientId.firstName} {selected.clientId.lastName} ·{" "}
                     {fmt(selected.loanAmount)}
                   </p>
                 </div>
@@ -2189,7 +2189,7 @@ export default function StaffLoanApplicationsPage() {
                     className="text-xs"
                     style={{ color: "rgba(255,255,255,0.4)" }}
                   >
-                    {selected.memberId.firstName} {selected.memberId.lastName} ·{" "}
+                    {selected.clientId.firstName} {selected.clientId.lastName} ·{" "}
                     {fmt(selected.loanAmount)}
                   </p>
                 </div>
@@ -2255,10 +2255,10 @@ export default function StaffLoanApplicationsPage() {
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div>
                     <span style={{ color: "rgba(255,255,255,0.4)" }}>
-                      Member:{" "}
+                      Client:{" "}
                     </span>
                     <span className="text-white font-semibold">
-                      {selected.memberId.firstName} {selected.memberId.lastName}
+                      {selected.clientId.firstName} {selected.clientId.lastName}
                     </span>
                   </div>
                   <div>
@@ -2383,7 +2383,7 @@ export default function StaffLoanApplicationsPage() {
                   </span>{" "}
                   for{" "}
                   <span className="text-white font-semibold">
-                    {selected.memberId.firstName} {selected.memberId.lastName}
+                    {selected.clientId.firstName} {selected.clientId.lastName}
                   </span>
                   . This cannot be undone.
                 </p>

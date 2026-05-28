@@ -24,7 +24,7 @@ function LoginContent() {
   const ROLE_DASHBOARD: Record<string, string> = {
     admin: "/admin-dashboard",
     staff: "/staff-dashboard",
-    member: "/member-dashboard",
+    client: "/client-dashboard",
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,7 +37,11 @@ function LoginContent() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ email: form.email, password: form.password }),
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password,
+          portalType: "client",
+        }),
       });
 
       const data = await res.json();
@@ -48,7 +52,7 @@ function LoginContent() {
       }
 
       const dest =
-        ROLE_DASHBOARD[data.user?.role ?? data.role] ?? "/member-dashboard";
+        ROLE_DASHBOARD[data.user?.role ?? data.role] ?? "/client-dashboard";
 
       router.push(dest);
       toast.success("Login Successful");

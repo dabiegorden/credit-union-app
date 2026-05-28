@@ -9,7 +9,6 @@ import { connectDB } from "@/lib/db";
 import { authMiddleware } from "@/middleware/Authmiddleware";
 import { z } from "zod";
 import Savingsaccount from "@/models/Savingsaccount";
-import mongoose from "mongoose";
 import Client from "@/models/Client";
 
 const createAccountSchema = z.object({

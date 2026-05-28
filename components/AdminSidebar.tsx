@@ -48,7 +48,7 @@ export interface UserProfile {
   id: string;
   name: string;
   email: string;
-  role: "admin" | "staff" | "member";
+  role: "admin" | "staff" | "client";
 }
 
 interface AdminSidebarProps {
@@ -64,21 +64,16 @@ export const menuItems = [
   },
 
   {
-    title: "Members",
+    title: "Clients",
     items: [
       {
         title: "All Users",
-        url: "/admin-dashboard/all-members",
+        url: "/admin-dashboard/all-clients",
         icon: Users,
       },
       {
-        title: "Members Management",
-        url: "/admin-dashboard/members",
-        icon: Users2,
-      },
-      {
-        title: "Link a member",
-        url: "/admin-dashboard/link-member",
+        title: "Clients Management",
+        url: "/admin-dashboard/clients",
         icon: Users2,
       },
     ],
@@ -108,16 +103,6 @@ export const menuItems = [
         url: "/admin-dashboard/loans",
         icon: ClipboardList,
       },
-      // {
-      //   title: "Active Loans",
-      //   url: "/admin-dashboard/active-loans",
-      //   icon: Landmark,
-      // },
-      // {
-      //   title: "Loan Repayments",
-      //   url: "/admin-dashboard/loans-repayments",
-      //   icon: FileText,
-      // },
     ],
   },
 
@@ -141,7 +126,7 @@ export const menuItems = [
 const roleLabel: Record<UserProfile["role"], string> = {
   admin: "Admin",
   staff: "Staff",
-  member: "Member",
+  client: "Client",
 };
 
 export function AdminSidebar({ user, onLogout }: AdminSidebarProps) {

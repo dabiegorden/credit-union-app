@@ -79,7 +79,6 @@ ClientSchema.methods.comparePassword = async function (password: string) {
 };
 
 ClientSchema.index({ status: 1 });
-ClientSchema.index({ email: 1 });
 
 export default mongoose.models.Client ||
   mongoose.model<IClient>("Client", ClientSchema);

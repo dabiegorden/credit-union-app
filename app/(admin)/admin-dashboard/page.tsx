@@ -42,7 +42,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
-interface MembersStats {
+interface ClientsStats {
   total: number;
   active: number;
   inactive: number;
@@ -107,8 +107,8 @@ interface RecentLoan {
   loanAmount: number;
   purpose: string;
   applicationDate: string;
-  memberName: string;
-  memberId: string;
+  clientName: string;
+  clientId: string;
 }
 interface RecentTx {
   _id: string;
@@ -116,16 +116,16 @@ interface RecentTx {
   amount: number;
   balanceAfter: number;
   date: string;
-  memberName: string;
-  memberId: string;
+  clientName: string;
+  clientId: string;
   accountNumber: string;
   accountType: string;
 }
 interface OverdueLoan {
   _id: string;
   loanId: string;
-  memberName: string;
-  memberId: string;
+  clientName: string;
+  clientId: string;
   outstandingBalance: number;
   penaltyAmount: number;
   nextPaymentDate: string;
@@ -140,7 +140,8 @@ interface Alerts {
 
 interface DashboardData {
   generatedAt: string;
-  members: MembersStats;
+  clients: ClientsStats;
+  accounts: SavingsStats;
   savings: SavingsStats;
   loans: LoansStats;
   repayments: RepayStats;
@@ -547,7 +548,7 @@ export default function AdminDashboard() {
   if (!data) return null;
 
   const {
-    members,
+    clients,
     savings,
     loans,
     repayments,
@@ -639,27 +640,27 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* ══ ROW 1 — Members + Savings ════════════════════════════════════ */}
+      {/* ══ ROW 1 — Clients + Savings ════════════════════════════════════ */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
-          label="Total Members"
-          value={members.total.toLocaleString()}
-          sub={`${members.active} active · ${members.suspended} suspended`}
+          label="Total Clients"
+          value={clients.total.toLocaleString()}
+          sub={`${clients.active} active · ${clients.suspended} suspended`}
           icon={Users}
           gradient="linear-gradient(135deg,#C8963E,#E4B86A)"
-          pct={members.pctChange}
+          pct={clients.pctChange}
           spark={sparklineData}
           sparkKey="deposits"
           sparkColor="#C8963E"
           delay={0}
         />
         <KpiCard
-          label="New Members This Month"
-          value={members.newThisMonth.toLocaleString()}
-          sub={`${members.inactive} inactive members`}
+          label="New Clients This Month"
+          value={clients.newThisMonth.toLocaleString()}
+          sub={`${clients.inactive} inactive clients · ${clients.newPrevMonth} last month`}
           icon={Users}
           gradient="linear-gradient(135deg,#1e3a5f,#60a5fa)"
-          pct={members.pctChange}
+          pct={clients.pctChange}
           delay={0.05}
         />
         <KpiCard
@@ -975,7 +976,7 @@ export default function AdminDashboard() {
         </motion.div>
       </div>
 
-      {/* ══ ROW 4 — Savings overview bar + Members breakdown ═══════════ */}
+      {/* ══ ROW 4 — Savings overview bar + Clients breakdown ═══════════ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Savings accounts breakdown */}
         <motion.div
@@ -1123,7 +1124,7 @@ export default function AdminDashboard() {
           </div>
         </motion.div>
 
-        {/* Members overview */}
+        {/* Clients overview */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1135,9 +1136,9 @@ export default function AdminDashboard() {
           }}
         >
           <SectionHeader
-            title="Member Overview"
-            subtitle={`${members.total} registered members`}
-            href="/admin-dashboard/members"
+            title="Client Overview"
+            subtitle={`${clients.total} registered clients`}
+            href="/admin-dashboard/clients"
           />
 
           {/* Radial-style donut */}
@@ -1157,7 +1158,7 @@ export default function AdminDashboard() {
                   strokeWidth={10}
                 />
                 {/* active ring */}
-                {members.total > 0 && (
+                {clients.total > 0 && (
                   <circle
                     cx={50}
                     cy={50}
@@ -1165,7 +1166,7 @@ export default function AdminDashboard() {
                     fill="none"
                     stroke="#4ade80"
                     strokeWidth={10}
-                    strokeDasharray={`${(members.active / members.total) * 239} 239`}
+                    strokeDasharray={`${(clients.active / clients.total) * 239} 239`}
                     strokeLinecap="round"
                     transform="rotate(-90 50 50)"
                     style={{ transition: "stroke-dasharray 1s ease" }}
@@ -1174,7 +1175,7 @@ export default function AdminDashboard() {
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="font-black text-white text-lg leading-none">
-                  {members.total}
+                  {clients.total}
                 </span>
                 <span
                   className="text-[9px] font-bold uppercase tracking-wider"
@@ -1186,15 +1187,15 @@ export default function AdminDashboard() {
             </div>
             <div className="flex-1 space-y-2.5">
               {[
-                { label: "Active", count: members.active, color: "#4ade80" },
+                { label: "Active", count: clients.active, color: "#4ade80" },
                 {
                   label: "Inactive",
-                  count: members.inactive,
+                  count: clients.inactive,
                   color: "#94a3b8",
                 },
                 {
                   label: "Suspended",
-                  count: members.suspended,
+                  count: clients.suspended,
                   color: "#f87171",
                 },
               ].map(({ label, count, color }) => (
@@ -1217,7 +1218,7 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* New members this month */}
+          {/* New clients this month */}
           <div
             className="flex items-center gap-3 p-3 rounded-xl mb-4"
             style={{
@@ -1233,24 +1234,24 @@ export default function AdminDashboard() {
             </div>
             <div className="flex-1">
               <p className="text-sm font-black text-white">
-                {members.newThisMonth} new this month
+                {clients.newThisMonth} new this month
               </p>
               <p
                 className="text-[10px]"
                 style={{ color: "rgba(255,255,255,0.4)" }}
               >
-                vs {members.newPrevMonth ?? 0} last month
+                vs {clients.newPrevMonth ?? 0} last month
               </p>
             </div>
-            <ChangeBadge pct={members.pctChange} />
+            <ChangeBadge pct={clients.pctChange} />
           </div>
 
           {/* Quick nav */}
           <div className="grid grid-cols-2 gap-2">
             {[
               {
-                label: "All Members",
-                href: "/admin-dashboard/all-members",
+                label: "All Clients",
+                href: "/admin-dashboard/all-clients",
                 icon: Users,
               },
               {
@@ -1453,11 +1454,11 @@ export default function AdminDashboard() {
                           color: "#fb923c",
                         }}
                       >
-                        {initials(loan.memberName)}
+                        {initials(loan.clientName)}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-bold text-white truncate">
-                          {loan.memberName}
+                          {loan.clientName}
                         </p>
                         <p
                           className="text-[10px]"
@@ -1577,7 +1578,7 @@ export default function AdminDashboard() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-bold text-white truncate">
-                        {tx.memberName}
+                        {tx.clientName}
                       </p>
                       <p
                         className="text-[10px]"
@@ -1659,12 +1660,12 @@ export default function AdminDashboard() {
                         color: "#0B1D3A",
                       }}
                     >
-                      {initials(loan.memberName)}
+                      {initials(loan.clientName)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
                         <p className="text-xs font-bold text-white truncate">
-                          {loan.memberName}
+                          {loan.clientName}
                         </p>
                         <span
                           className="text-[9px] font-black px-1.5 py-0.5 rounded-full shrink-0 uppercase"

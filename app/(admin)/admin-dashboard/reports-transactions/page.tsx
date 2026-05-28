@@ -71,8 +71,8 @@ interface AcctBreakdown {
   total: number;
   count: number;
 }
-interface TopMember {
-  memberId: string;
+interface TopClients {
+  clientId: string;
   name: string;
   totalAmount: number;
   count: number;
@@ -86,7 +86,7 @@ interface ReportData {
   timeSeriesData: TimePoint[];
   typeTotals: TypeTotal[];
   accountTypeBreakdown: AcctBreakdown[];
-  topMembers: TopMember[];
+  topClients: TopClients[];
 }
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
@@ -377,17 +377,17 @@ export default function TransactionReportPage() {
         XLSX.utils.book_append_sheet(wb, ws2, "Summary by Period");
       }
 
-      /* Sheet 3: Top Members */
-      if (data?.topMembers?.length) {
-        const memberRows = data.topMembers.map((m) => ({
-          "Member ID": m.memberId,
-          "Member Name": m.name,
-          "Total Volume": m.totalAmount,
-          Deposits: m.deposits,
-          Withdrawals: m.withdrawals,
-          "Transaction Count": m.count,
+      /* Sheet 3: Top Clients */
+      if (data?.topClients?.length) {
+        const clientRows = data.topClients.map((c) => ({
+          "Client ID": c.clientId,
+          "Client Name": c.name,
+          "Total Volume": c.totalAmount,
+          Deposits: c.deposits,
+          Withdrawals: c.withdrawals,
+          "Transaction Count": c.count,
         }));
-        const ws3 = XLSX.utils.json_to_sheet(memberRows);
+        const ws3 = XLSX.utils.json_to_sheet(clientRows);
         ws3["!cols"] = [
           { wch: 14 },
           { wch: 24 },
@@ -396,7 +396,7 @@ export default function TransactionReportPage() {
           { wch: 14 },
           { wch: 18 },
         ];
-        XLSX.utils.book_append_sheet(wb, ws3, "Top Members");
+        XLSX.utils.book_append_sheet(wb, ws3, "Top Clients");
       }
 
       const filename = `transactions-report-${fromDate}-to-${toDate}.xlsx`;
@@ -979,27 +979,27 @@ export default function TransactionReportPage() {
         )}
       </ChartCard>
 
-      {/* ── Top Members ── */}
+      {/* ── Top Clients ── */}
       <ChartCard
-        title="Top 10 Most Active Members"
+        title="Top 10 Most Active Clients"
         subtitle="By total transaction volume in selected period"
       >
-        {(data?.topMembers ?? []).length === 0 ? (
+        {(data?.topClients ?? []).length === 0 ? (
           <div
             className="flex items-center justify-center h-48"
             style={{ color: "rgba(255,255,255,0.25)" }}
           >
-            <p className="text-sm">No member data available</p>
+            <p className="text-sm">No client data available</p>
           </div>
         ) : (
           <div className="space-y-1">
-            {(data?.topMembers ?? []).map((m, i) => {
+            {(data?.topClients ?? []).map((c, i) => {
               const pct = data?.kpis?.totalVolume
-                ? (m.totalAmount / data.kpis.totalVolume) * 100
+                ? (c.totalAmount / data.kpis.totalVolume) * 100
                 : 0;
               return (
                 <div
-                  key={m.memberId}
+                  key={c.clientId}
                   className="flex items-center gap-3 py-2.5 px-3 rounded-xl transition-colors"
                   style={{
                     background: i % 2 === 0 ? "rgba(200,150,62,0.03)" : "",
@@ -1025,7 +1025,7 @@ export default function TransactionReportPage() {
                       color: "#0B1D3A",
                     }}
                   >
-                    {m.name
+                    {c.name
                       .split(" ")
                       .map((n) => n[0])
                       .join("")
@@ -1035,13 +1035,13 @@ export default function TransactionReportPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
                       <p className="text-sm font-bold text-white truncate">
-                        {m.name}
+                        {c.name}
                       </p>
                       <p
                         className="text-sm font-black ml-3 shrink-0"
                         style={{ color: "#E4B86A" }}
                       >
-                        {fmt(m.totalAmount)}
+                        {fmt(c.totalAmount)}
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
@@ -1062,8 +1062,8 @@ export default function TransactionReportPage() {
                         className="text-[10px] shrink-0"
                         style={{ color: "rgba(255,255,255,0.35)" }}
                       >
-                        {m.count} txns · D:{fmt(m.deposits)} W:
-                        {fmt(m.withdrawals)}
+                        {c.count} txns · D:{fmt(c.deposits)} W:
+                        {fmt(c.withdrawals)}
                       </span>
                     </div>
                   </div>

@@ -22,9 +22,9 @@ import { motion } from "framer-motion";
 import { format } from "date-fns";
 
 /* ─── Types ── */
-interface MemberProfile {
+interface ClientProfile {
   _id: string;
-  memberId: string;
+  clientId: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -58,8 +58,8 @@ interface Transaction {
 }
 
 interface DashboardData {
-  member: MemberProfile;
-  savingsAccounts: SavingsAccount[];
+  client: ClientProfile;
+  accounts: SavingsAccount[];
   recentTransactions: Transaction[];
   loanSummary: { activeLoans: number; pendingLoans: number; paidLoans: number };
 }
@@ -158,7 +158,7 @@ function NotLinkedScreen({
             className="text-sm leading-relaxed mb-6"
             style={{ color: "rgba(255,255,255,0.38)" }}
           >
-            is not yet linked to a Member profile. Please contact staff and
+            is not yet linked to a Client profile. Please contact staff and
             provide your email address so they can complete your registration.
           </p>
           <div
@@ -206,7 +206,7 @@ function NotLinkedScreen({
 }
 
 /* ─── Main ── */
-export default function MemberDashboard() {
+export default function ClientDashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<{
@@ -220,7 +220,7 @@ export default function MemberDashboard() {
   async function fetchDashboard() {
     setLoading(true);
     try {
-      const res = await fetch("/api/member/profile", {
+      const res = await fetch("/api/clients/profile", {
         credentials: "include",
       });
       const json = await res.json();
@@ -285,10 +285,10 @@ export default function MemberDashboard() {
       </div>
     );
 
-  if (error?.code === "MEMBER_PROFILE_NOT_FOUND") {
+  if (error?.code === "CLIENT_PROFILE_NOT_FOUND") {
     return (
       <NotLinkedScreen
-        userName={error.userName || "Member"}
+        userName={error.userName || "Client"}
         userEmail={error.userEmail || ""}
       />
     );
@@ -326,8 +326,14 @@ export default function MemberDashboard() {
       </div>
     );
 
-  const { member, savingsAccounts, recentTransactions, loanSummary } = data;
-  const initials = (member.firstName[0] + member.lastName[0]).toUpperCase();
+  const {
+    client,
+    accounts: savingsAccounts,
+    recentTransactions,
+    loanSummary,
+  } = data;
+  const initials =
+    `${client?.firstName?.[0] || ""}${client?.lastName?.[0] || ""}`.toUpperCase();
 
   return (
     <div
@@ -346,35 +352,37 @@ export default function MemberDashboard() {
             }}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-[#C8963E] animate-pulse" />
-            Member Portal
+            Client Portal
           </div>
           <h1 className="font-serif font-black text-white text-2xl sm:text-3xl leading-tight">
             Welcome,{" "}
-            <span style={{ color: "#E4B86A" }}>{member.firstName}</span>
+            <span style={{ color: "#E4B86A" }}>{client.firstName}</span>
           </h1>
           <p
             className="text-sm mt-1"
             style={{ color: "rgba(255,255,255,0.38)" }}
           >
-            {member.memberId} · Member since{" "}
-            {format(new Date(member.dateJoined), "MMMM yyyy")}
+            {client.clientId} · Client since{" "}
+            {client.dateJoined && !isNaN(new Date(client.dateJoined).getTime())
+              ? format(new Date(client.dateJoined), "MMMM yyyy")
+              : "—"}
           </p>
         </div>
         <div className="flex items-center gap-3">
           <span
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${member.status === "active" ? "text-emerald-400" : "text-red-400"}`}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${client.status === "active" ? "text-emerald-400" : "text-red-400"}`}
             style={{
               background:
-                member.status === "active"
+                client.status === "active"
                   ? "rgba(34,197,94,0.12)"
                   : "rgba(239,68,68,0.12)",
-              border: `1px solid ${member.status === "active" ? "rgba(34,197,94,0.28)" : "rgba(239,68,68,0.28)"}`,
+              border: `1px solid ${client.status === "active" ? "rgba(34,197,94,0.28)" : "rgba(239,68,68,0.28)"}`,
             }}
           >
             <span
-              className={`w-1.5 h-1.5 rounded-full ${member.status === "active" ? "bg-emerald-400 animate-pulse" : "bg-red-400"}`}
+              className={`w-1.5 h-1.5 rounded-full ${client.status === "active" ? "bg-emerald-400 animate-pulse" : "bg-red-400"}`}
             />
-            {member.status.toUpperCase()}
+            {client.status.toUpperCase()}
           </span>
           <button
             onClick={() => {
@@ -400,7 +408,7 @@ export default function MemberDashboard() {
         {[
           {
             label: "Total Savings",
-            val: fmt(member.savingsBalance),
+            val: fmt(client.savingsBalance),
             icon: Wallet,
             gradient: "linear-gradient(135deg,#C8963E,#E4B86A)",
           },
@@ -464,7 +472,7 @@ export default function MemberDashboard() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             {
-              href: "/member-dashboard/savings",
+              href: "/client-dashboard/savings",
               icon: ArrowDownCircle,
               label: "Deposit",
               color: "#4ade80",
@@ -472,7 +480,7 @@ export default function MemberDashboard() {
               border: "rgba(34,197,94,0.22)",
             },
             {
-              href: "/member-dashboard/savings",
+              href: "/client-dashboard/savings",
               icon: ArrowUpCircle,
               label: "Withdraw",
               color: "#f87171",
@@ -480,7 +488,7 @@ export default function MemberDashboard() {
               border: "rgba(239,68,68,0.22)",
             },
             {
-              href: "/member-dashboard/loans/apply",
+              href: "/client-dashboard/loans/apply",
               icon: FileText,
               label: "Apply for Loan",
               color: "#E4B86A",
@@ -488,7 +496,7 @@ export default function MemberDashboard() {
               border: "rgba(200,150,62,0.22)",
             },
             {
-              href: "/member-dashboard/loans",
+              href: "/client-dashboard/loans",
               icon: TrendingUp,
               label: "Track Loans",
               color: "#60a5fa",
@@ -528,7 +536,7 @@ export default function MemberDashboard() {
               My Accounts
             </p>
             <Link
-              href="/member-dashboard/loans/savings"
+              href="/client-dashboard/loans/savings"
               className="flex items-center gap-1 text-xs font-bold transition-colors hover:underline"
               style={{ color: "#E4B86A" }}
             >
@@ -649,7 +657,7 @@ export default function MemberDashboard() {
               Recent Transactions
             </p>
             <Link
-              href="/member-dashboard/loans/savings"
+              href="/client-dashboard/loans/savings"
               className="flex items-center gap-1 text-xs font-bold transition-colors hover:underline"
               style={{ color: "#E4B86A" }}
             >
@@ -722,7 +730,9 @@ export default function MemberDashboard() {
                           style={{ color: "rgba(255,255,255,0.35)" }}
                         >
                           {tx.accountId?.accountName ?? "—"} ·{" "}
-                          {format(new Date(tx.date), "MMM d, yyyy")}
+                          {tx.date && !isNaN(new Date(tx.date).getTime())
+                            ? format(new Date(tx.date), "MMM d, yyyy")
+                            : "—"}
                         </p>
                       </div>
                       <div className="text-right">

@@ -38,7 +38,7 @@ export interface UserProfile {
   id: string;
   name: string;
   email: string;
-  role: "admin" | "staff" | "member";
+  role: "admin" | "staff" | "client";
 }
 
 interface StaffSidebarProps {
@@ -102,7 +102,7 @@ export const staffMenuItems = [
 const roleLabel: Record<UserProfile["role"], string> = {
   admin: "Admin",
   staff: "Staff",
-  member: "Member",
+  client: "Client",
 };
 
 export function StaffSidebar({ user, onLogout }: StaffSidebarProps) {

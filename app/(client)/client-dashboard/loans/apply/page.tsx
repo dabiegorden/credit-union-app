@@ -133,7 +133,7 @@ function PreviewRow({
 /* ─── Main ── */
 export default function LoanApplyPage() {
   const router = useRouter();
-  const [memberId, setMemberId] = useState("");
+  const [clientId, setClientId] = useState("");
   const [eligibility, setEligibility] = useState<EligibilityResult | null>(
     null,
   );
@@ -179,15 +179,15 @@ export default function LoanApplyPage() {
   async function fetchProfile() {
     try {
       setEligibilityLoading(true);
-      const profileRes = await fetch("/api/member/profile", {
+      const profileRes = await fetch("/api/clients/profile", {
         credentials: "include",
       });
       const profileJson = await profileRes.json();
       if (!profileRes.ok) return;
-      const mid = profileJson.member._id;
-      setMemberId(mid);
+      const mid = profileJson.client._id;
+      setClientId(mid);
       const res = await fetch(
-        `/api/loans/eligibility?memberId=${mid}&amount=1000`,
+        `/api/loans/eligibility?clientId=${mid}&amount=1000`,
         { credentials: "include" },
       );
       const json = await res.json();
@@ -218,7 +218,7 @@ export default function LoanApplyPage() {
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          memberId,
+          clientId,
           loanAmount: amount,
           loanDurationMonths: months,
           purpose,

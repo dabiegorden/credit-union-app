@@ -32,11 +32,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
-interface PopulatedMember {
+interface PopulatedClient {
   _id: string;
-  memberId: string;
-  firstName: string;
-  lastName: string;
+  clientId: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
   phone: string;
   status: string;
@@ -53,7 +53,7 @@ interface PopulatedUser {
 interface SavingsAccount {
   _id: string;
   accountNumber: string;
-  memberId: PopulatedMember;
+  clientId: PopulatedClient;
   accountType: "regular" | "fixed" | "susu";
   accountName: string;
   balance: number;
@@ -133,8 +133,11 @@ function fmt(n: number) {
   return `GH₵${n.toLocaleString("en-GH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function initials(m: PopulatedMember) {
-  return (m?.firstName[0] + m?.lastName[0])?.toUpperCase();
+function initials(m?: PopulatedClient) {
+  const first = m?.firstName?.charAt(0) || "";
+  const last = m?.lastName?.charAt(0) || "";
+
+  return `${first}${last}`.toUpperCase();
 }
 
 /* ─── Modal Shell ─────────────────────────────────────────────────────────── */
@@ -290,10 +293,10 @@ export default function AdminSavingsAccountPage() {
   const [delLoading, setDelLoading] = useState(false);
 
   // Open account form
-  const [allMembers, setAllMembers] = useState<PopulatedMember[]>([]);
-  const [membersLoading, setMembersLoading] = useState(false);
-  const [memberFilter, setMemberFilter] = useState("");
-  const [chosenMember, setChosenMember] = useState<PopulatedMember | null>(
+  const [allClients, setAllClients] = useState<PopulatedClient[]>([]);
+  const [clientsLoading, setClientsLoading] = useState(false);
+  const [clientFilter, setClientFilter] = useState("");
+  const [chosenClient, setChosenClient] = useState<PopulatedClient | null>(
     null,
   );
   const [acctType, setAcctType] = useState<"regular" | "fixed" | "susu">(
@@ -357,19 +360,19 @@ export default function AdminSavingsAccountPage() {
     };
   }, [search, statusFilter, typeFilter, fetchAccounts]);
 
-  /* ── Fetch all active members for the open-account selector ── */
-  const fetchAllMembers = useCallback(async () => {
-    setMembersLoading(true);
+  /* ── Fetch all active clients for the open-account selector ── */
+  const fetchAllClients = useCallback(async () => {
+    setClientsLoading(true);
     try {
-      const res = await fetch("/api/members?limit=200&status=active", {
+      const res = await fetch("/api/clients?limit=200&status=active", {
         credentials: "include",
       });
       const data = await res.json();
-      setAllMembers(data.members ?? []);
+      setAllClients(data.clients ?? []);
     } catch {
-      toast.error("Could not load members");
+      toast.error("Could not load clients");
     } finally {
-      setMembersLoading(false);
+      setClientsLoading(false);
     }
   }, []);
 
@@ -412,8 +415,8 @@ export default function AdminSavingsAccountPage() {
 
   /* ── Reset open form ── */
   const resetOpenForm = () => {
-    setChosenMember(null);
-    setMemberFilter("");
+    setChosenClient(null);
+    setClientFilter("");
     setAcctType("regular");
     setAcctName("");
     setAcctDesc("");
@@ -422,8 +425,8 @@ export default function AdminSavingsAccountPage() {
   /* ── Submit: open new account ── */
   const handleOpenAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!chosenMember) {
-      toast.error("Please select a member");
+    if (!chosenClient) {
+      toast.error("Please select a client");
       return;
     }
     setFormLoading(true);
@@ -433,7 +436,7 @@ export default function AdminSavingsAccountPage() {
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          memberId: chosenMember._id,
+          clientId: chosenClient._id,
           accountType: acctType,
           accountName: acctName || undefined,
           description: acctDesc || undefined,
@@ -545,7 +548,7 @@ export default function AdminSavingsAccountPage() {
         <button
           onClick={() => {
             resetOpenForm();
-            fetchAllMembers();
+            fetchAllClients();
             setMode("open");
           }}
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm shrink-0 transition-all duration-200 hover:-translate-y-0.5"
@@ -806,17 +809,18 @@ export default function AdminSavingsAccountPage() {
                         color: "#0B1D3A",
                       }}
                     >
-                      {initials(acc.memberId)}
+                      {initials(acc.clientId)}
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-white truncate">
-                        {acc.memberId.firstName} {acc.memberId.lastName}
+                        {acc.clientId?.firstName || "Unknown"}{" "}
+                        {acc.clientId?.lastName || "Client"}
                       </p>
                       <p
                         className="text-[10px] truncate font-medium"
                         style={{ color: "#E4B86A" }}
                       >
-                        {acc.memberId.memberId}
+                        {acc.clientId?.clientId || "No Client ID"}
                       </p>
                     </div>
                   </div>
@@ -1016,9 +1020,9 @@ export default function AdminSavingsAccountPage() {
           >
             <form onSubmit={handleOpenAccount} className="space-y-5">
               {/* Member selector — fetched list */}
-              <Field label="Select Member" required>
-                {/* Selected member pill */}
-                {chosenMember ? (
+              <Field label="Select Client" required>
+                {/* Selected client pill */}
+                {chosenClient ? (
                   <div
                     className="flex items-center gap-3 p-3 rounded-xl"
                     style={{
@@ -1033,22 +1037,22 @@ export default function AdminSavingsAccountPage() {
                         color: "#0B1D3A",
                       }}
                     >
-                      {initials(chosenMember)}
+                      {initials(chosenClient)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-white leading-tight">
-                        {chosenMember.firstName} {chosenMember.lastName}
+                        {chosenClient.firstName} {chosenClient.lastName}
                       </p>
                       <p
                         className="text-[11px] mt-0.5"
                         style={{ color: "rgba(255,255,255,0.4)" }}
                       >
-                        {chosenMember.memberId} · {chosenMember.email}
+                        {chosenClient.clientId} · {chosenClient.email}
                       </p>
                     </div>
                     <button
                       type="button"
-                      onClick={() => setChosenMember(null)}
+                      onClick={() => setChosenClient(null)}
                       className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors shrink-0"
                       style={{ background: "rgba(255,255,255,0.07)" }}
                       onMouseEnter={(e) =>
@@ -1083,16 +1087,16 @@ export default function AdminSavingsAccountPage() {
                         style={{ color: "rgba(200,150,62,0.5)" }}
                       />
                       <input
-                        placeholder="Filter members…"
-                        value={memberFilter}
-                        onChange={(e) => setMemberFilter(e.target.value)}
+                        placeholder="Filter clients…"
+                        value={clientFilter}
+                        onChange={(e) => setClientFilter(e.target.value)}
                         className="w-full bg-transparent pl-9 pr-4 py-2.5 text-sm text-white placeholder-white/20 outline-none"
                       />
                     </div>
 
                     {/* Scrollable list */}
                     <div className="overflow-y-auto" style={{ maxHeight: 220 }}>
-                      {membersLoading ? (
+                      {clientsLoading ? (
                         <div
                           className="flex items-center justify-center gap-2 py-8"
                           style={{ color: "rgba(255,255,255,0.3)" }}
@@ -1101,35 +1105,35 @@ export default function AdminSavingsAccountPage() {
                             className="w-4 h-4 animate-spin"
                             style={{ color: "#C8963E" }}
                           />
-                          <span className="text-sm">Loading members…</span>
+                          <span className="text-sm">Loading clients…</span>
                         </div>
                       ) : (
                         (() => {
-                          const q = memberFilter.toLowerCase();
-                          const filtered = allMembers.filter(
-                            (m) =>
+                          const q = clientFilter.toLowerCase();
+                          const filtered = allClients.filter(
+                            (c) =>
                               !q ||
-                              `${m.firstName} ${m.lastName}`
+                              `${c.firstName} ${c.lastName}`
                                 .toLowerCase()
                                 .includes(q) ||
-                              m.memberId.toLowerCase().includes(q) ||
-                              m.email.toLowerCase().includes(q),
+                              c.clientId.toLowerCase().includes(q) ||
+                              c.email.toLowerCase().includes(q),
                           );
                           return filtered.length === 0 ? (
                             <p
                               className="text-center text-sm py-8"
                               style={{ color: "rgba(255,255,255,0.25)" }}
                             >
-                              No members found
+                              No clients found
                             </p>
                           ) : (
-                            filtered.map((m, i) => (
+                            filtered.map((c, i) => (
                               <button
-                                key={m._id}
+                                key={c._id}
                                 type="button"
                                 onClick={() => {
-                                  setChosenMember(m);
-                                  setMemberFilter("");
+                                  setChosenClient(c);
+                                  setClientFilter("");
                                 }}
                                 className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors"
                                 style={{
@@ -1154,17 +1158,17 @@ export default function AdminSavingsAccountPage() {
                                     color: "#0B1D3A",
                                   }}
                                 >
-                                  {initials(m)}
+                                  {initials(c)}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-bold text-white truncate">
-                                    {m.firstName} {m.lastName}
+                                    {c.firstName} {c.lastName}
                                   </p>
                                   <p
                                     className="text-[11px] truncate"
                                     style={{ color: "rgba(255,255,255,0.38)" }}
                                   >
-                                    {m.memberId} · {m.email}
+                                    {c.clientId} · {c.email}
                                   </p>
                                 </div>
                                 <span
@@ -1252,7 +1256,7 @@ export default function AdminSavingsAccountPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={formLoading || !chosenMember}
+                  disabled={formLoading || !chosenClient}
                   className="flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all hover:-translate-y-0.5 disabled:opacity-55 disabled:hover:translate-y-0"
                   style={{
                     background: "linear-gradient(135deg,#C8963E,#E4B86A)",
@@ -1292,11 +1296,11 @@ export default function AdminSavingsAccountPage() {
                     color: "#0B1D3A",
                   }}
                 >
-                  {initials(selected.memberId)}
+                  {initials(selected.clientId)}
                 </div>
                 <div>
                   <p className="text-sm font-bold text-white">
-                    {selected.memberId.firstName} {selected.memberId.lastName}
+                    {selected.clientId.firstName} {selected.clientId.lastName}
                   </p>
                   <p
                     className="text-[11px] font-mono"
@@ -1422,11 +1426,11 @@ export default function AdminSavingsAccountPage() {
                       color: "#0B1D3A",
                     }}
                   >
-                    {initials(selected.memberId)}
+                    {initials(selected.clientId)}
                   </div>
                   <div>
                     <p className="font-serif font-black text-white text-lg">
-                      {selected.memberId.firstName} {selected.memberId.lastName}
+                      {selected.clientId.firstName} {selected.clientId.lastName}
                     </p>
                     <p
                       className="text-[11px] font-mono"
@@ -1467,8 +1471,8 @@ export default function AdminSavingsAccountPage() {
                   },
                   {
                     icon: User,
-                    label: "Member ID",
-                    value: selected.memberId.memberId,
+                    label: "Client ID",
+                    value: selected.clientId.clientId,
                   },
                   {
                     icon: Calendar,

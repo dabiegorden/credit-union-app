@@ -582,7 +582,7 @@ function Drawer({
 }
 
 /* ─── Main ── */
-export default function MemberLoansPage() {
+export default function ClientsLoansPage() {
   const [loans, setLoans] = useState<Loan[]>([]);
   const [pagination, setPagination] = useState<Pagination>({
     total: 0,
@@ -723,7 +723,7 @@ export default function MemberLoansPage() {
           </p>
         </div>
         <Link
-          href="/member-dashboard/loans/apply"
+          href="/client-dashboard/loans/apply"
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm shrink-0 transition-all duration-200 hover:-translate-y-0.5"
           style={{
             background: "linear-gradient(135deg,#C8963E,#E4B86A)",
@@ -795,7 +795,7 @@ export default function MemberLoansPage() {
 
       {/* ── Status Tabs ── */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
-        {STATUS_TABS.map((tab) => {
+        {STATUS_TABS.map((tab:any) => {
           const active = tab === statusFilter;
           const m = tab !== "all" ? STATUS_META[tab] : null;
           return (

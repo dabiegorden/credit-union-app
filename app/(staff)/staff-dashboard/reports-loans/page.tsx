@@ -17,29 +17,23 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  RadialBarChart,
-  RadialBar,
 } from "recharts";
 import {
   FileText,
   TrendingUp,
-  TrendingDown,
-  Download,
-  RefreshCw,
   ChevronDown,
   Loader2,
-  DollarSign,
   Calendar,
   AlertTriangle,
   CheckCircle2,
-  Clock,
-  Banknote,
   BarChart3,
   Percent,
   ShieldCheck,
   ShieldAlert,
   ShieldX,
-  XCircle,
+  Download,
+  RefreshCw,
+  Banknote,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, subDays } from "date-fns";

@@ -16,12 +16,15 @@ import {
   Users,
   Wallet,
   CreditCard,
+  TrendingUp,
+  TrendingDown,
   ArrowUpRight,
   ArrowDownRight,
   AlertTriangle,
   RefreshCw,
   Loader2,
   ArrowDownCircle,
+  ArrowUpCircle,
   CheckCircle2,
   Clock,
   Banknote,
@@ -32,7 +35,6 @@ import {
   ChevronRight,
   CircleDot,
   BarChart3,
-  ArrowUpCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow, format } from "date-fns";
@@ -40,7 +42,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
-interface MembersStats {
+interface ClientsStats {
   total: number;
   active: number;
   inactive: number;
@@ -105,8 +107,8 @@ interface RecentLoan {
   loanAmount: number;
   purpose: string;
   applicationDate: string;
-  memberName: string;
-  memberId: string;
+  clientName: string;
+  clientId: string;
 }
 interface RecentTx {
   _id: string;
@@ -114,16 +116,16 @@ interface RecentTx {
   amount: number;
   balanceAfter: number;
   date: string;
-  memberName: string;
-  memberId: string;
+  clientName: string;
+  clientId: string;
   accountNumber: string;
   accountType: string;
 }
 interface OverdueLoan {
   _id: string;
   loanId: string;
-  memberName: string;
-  memberId: string;
+  clientName: string;
+  clientId: string;
   outstandingBalance: number;
   penaltyAmount: number;
   nextPaymentDate: string;
@@ -138,7 +140,7 @@ interface Alerts {
 
 interface DashboardData {
   generatedAt: string;
-  members: MembersStats;
+  clients: ClientsStats;
   savings: SavingsStats;
   loans: LoansStats;
   repayments: RepayStats;
@@ -473,7 +475,7 @@ function Skeleton({ h = 20, r = 8 }: { h?: number; r?: number }) {
 /* ═══════════════════════════════════════════════════════════════════════════
    MAIN PAGE
 ═══════════════════════════════════════════════════════════════════════════ */
-export default function StaffDashboard() {
+export default function AdminDashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [spinning, setSpinning] = useState(false);
@@ -545,7 +547,7 @@ export default function StaffDashboard() {
   if (!data) return null;
 
   const {
-    members,
+    clients,
     savings,
     loans,
     repayments,
@@ -591,10 +593,10 @@ export default function StaffDashboard() {
             }}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-[#C8963E] animate-pulse" />
-            Staff Dashboard
+            Admin Dashboard
           </div>
           <h1 className="font-serif font-black text-white text-2xl sm:text-3xl">
-            Welcome Back, <span style={{ color: "#E4B86A" }}>Staff</span>
+            Welcome Back, <span style={{ color: "#E4B86A" }}>Admin</span>
           </h1>
           <p
             className="text-sm mt-1"
@@ -637,27 +639,27 @@ export default function StaffDashboard() {
         </div>
       </div>
 
-      {/* ══ ROW 1 — Members + Savings ════════════════════════════════════ */}
+      {/* ══ ROW 1 — Clients + Savings ════════════════════════════════════ */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
-          label="Total Members"
-          value={members.total.toLocaleString()}
-          sub={`${members.active} active · ${members.suspended} suspended`}
+          label="Total Clients"
+          value={clients.total.toLocaleString()}
+          sub={`${clients.active} active · ${clients.suspended} suspended`}
           icon={Users}
           gradient="linear-gradient(135deg,#C8963E,#E4B86A)"
-          pct={members.pctChange}
+          pct={clients.pctChange}
           spark={sparklineData}
           sparkKey="deposits"
           sparkColor="#C8963E"
           delay={0}
         />
         <KpiCard
-          label="New Members This Month"
-          value={members.newThisMonth.toLocaleString()}
-          sub={`${members.inactive} inactive members`}
+          label="New Clients This Month"
+          value={clients.newThisMonth.toLocaleString()}
+          sub={`${clients.inactive} inactive clients · ${clients.newPrevMonth} last month`}
           icon={Users}
           gradient="linear-gradient(135deg,#1e3a5f,#60a5fa)"
-          pct={members.pctChange}
+          pct={clients.pctChange}
           delay={0.05}
         />
         <KpiCard
@@ -749,7 +751,7 @@ export default function StaffDashboard() {
           <SectionHeader
             title="Transaction Volume — Last 30 Days"
             subtitle={`This month: ${fmt(savings.depositsThisMonth)} deposits · ${fmt(savings.withdrawalsThisMonth)} withdrawals`}
-            href="/staff-dashboard/deposits"
+            href="/admin-dashboard/deposits"
           />
           {sparklineData.length === 0 ? (
             <div
@@ -869,7 +871,7 @@ export default function StaffDashboard() {
           <SectionHeader
             title="Loan Portfolio"
             subtitle={`${loans.total} total applications`}
-            href="/staff-dashboard/loans"
+            href="/admin-dashboard/loans"
           />
 
           {/* Big numbers */}
@@ -973,7 +975,7 @@ export default function StaffDashboard() {
         </motion.div>
       </div>
 
-      {/* ══ ROW 4 — Savings overview bar + Members breakdown ═══════════ */}
+      {/* ══ ROW 4 — Savings overview bar + Clients breakdown ═══════════ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Savings accounts breakdown */}
         <motion.div
@@ -989,7 +991,7 @@ export default function StaffDashboard() {
           <SectionHeader
             title="Savings Accounts"
             subtitle={`${savings.totalAccounts} accounts total`}
-            href="/staff-dashboard/savings"
+            href="/admin-dashboard/savings"
           />
 
           {/* Balance hero */}
@@ -1121,7 +1123,7 @@ export default function StaffDashboard() {
           </div>
         </motion.div>
 
-        {/* Members overview */}
+        {/* Clients overview */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1133,9 +1135,9 @@ export default function StaffDashboard() {
           }}
         >
           <SectionHeader
-            title="Member Overview"
-            subtitle={`${members.total} registered members`}
-            href="/staff-dashboard/members"
+            title="Client Overview"
+            subtitle={`${clients.total} registered clients`}
+            href="/admin-dashboard/clients"
           />
 
           {/* Radial-style donut */}
@@ -1155,7 +1157,7 @@ export default function StaffDashboard() {
                   strokeWidth={10}
                 />
                 {/* active ring */}
-                {members.total > 0 && (
+                {clients.total > 0 && (
                   <circle
                     cx={50}
                     cy={50}
@@ -1163,7 +1165,7 @@ export default function StaffDashboard() {
                     fill="none"
                     stroke="#4ade80"
                     strokeWidth={10}
-                    strokeDasharray={`${(members.active / members.total) * 239} 239`}
+                    strokeDasharray={`${(clients.active / clients.total) * 239} 239`}
                     strokeLinecap="round"
                     transform="rotate(-90 50 50)"
                     style={{ transition: "stroke-dasharray 1s ease" }}
@@ -1172,7 +1174,7 @@ export default function StaffDashboard() {
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className="font-black text-white text-lg leading-none">
-                  {members.total}
+                  {clients.total}
                 </span>
                 <span
                   className="text-[9px] font-bold uppercase tracking-wider"
@@ -1184,15 +1186,15 @@ export default function StaffDashboard() {
             </div>
             <div className="flex-1 space-y-2.5">
               {[
-                { label: "Active", count: members.active, color: "#4ade80" },
+                { label: "Active", count: clients.active, color: "#4ade80" },
                 {
                   label: "Inactive",
-                  count: members.inactive,
+                  count: clients.inactive,
                   color: "#94a3b8",
                 },
                 {
                   label: "Suspended",
-                  count: members.suspended,
+                  count: clients.suspended,
                   color: "#f87171",
                 },
               ].map(({ label, count, color }) => (
@@ -1215,7 +1217,7 @@ export default function StaffDashboard() {
             </div>
           </div>
 
-          {/* New members this month */}
+          {/* New clients this month */}
           <div
             className="flex items-center gap-3 p-3 rounded-xl mb-4"
             style={{
@@ -1231,34 +1233,39 @@ export default function StaffDashboard() {
             </div>
             <div className="flex-1">
               <p className="text-sm font-black text-white">
-                {members.newThisMonth} new this month
+                {clients.newThisMonth} new this month
               </p>
               <p
                 className="text-[10px]"
                 style={{ color: "rgba(255,255,255,0.4)" }}
               >
-                vs {members.newPrevMonth ?? 0} last month
+                vs {clients.newPrevMonth ?? 0} last month
               </p>
             </div>
-            <ChangeBadge pct={members.pctChange} />
+            <ChangeBadge pct={clients.pctChange} />
           </div>
 
           {/* Quick nav */}
           <div className="grid grid-cols-2 gap-2">
             {[
               {
+                label: "All Clients",
+                href: "/admin-dashboard/all-clients",
+                icon: Users,
+              },
+              {
                 label: "Savings Accts",
-                href: "/staff-dashboard/deposits",
+                href: "/admin-dashboard/savings",
                 icon: Wallet,
               },
               {
                 label: "Loan Apps",
-                href: "/staff-dashboard/loans",
+                href: "/admin-dashboard/loans",
                 icon: FileText,
               },
               {
                 label: "Reports",
-                href: "/staff-dashboard/reports-transactions",
+                href: "/admin-dashboard/reports-transactions",
                 icon: BarChart3,
               },
             ].map(({ label, href, icon: Icon }) => (
@@ -1352,21 +1359,21 @@ export default function StaffDashboard() {
                   label: "Overdue Loans",
                   count: alerts.overdueLoansCount,
                   color: "#fb923c",
-                  href: "/staff-dashboard/loans?status=overdue",
+                  href: "/admin-dashboard/loans?status=overdue",
                 },
                 {
                   icon: Clock,
                   label: "Pending Applications",
                   count: alerts.pendingApplicationsCount,
                   color: "#E4B86A",
-                  href: "/staff-dashboard/loans?status=pending",
+                  href: "/admin-dashboard/loans?status=pending",
                 },
                 {
                   icon: ShieldAlert,
                   label: "Dormant Accounts",
                   count: alerts.dormantAccountsCount,
                   color: "#60a5fa",
-                  href: "/staff-dashboard/deposits",
+                  href: "/admin-dashboard/savings",
                 },
               ].map(({ icon: Icon, label, count, color, href }) => (
                 <Link
@@ -1446,11 +1453,11 @@ export default function StaffDashboard() {
                           color: "#fb923c",
                         }}
                       >
-                        {initials(loan.memberName)}
+                        {initials(loan.clientName)}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-bold text-white truncate">
-                          {loan.memberName}
+                          {loan.clientName}
                         </p>
                         <p
                           className="text-[10px]"
@@ -1521,7 +1528,7 @@ export default function StaffDashboard() {
           <SectionHeader
             title="Recent Transactions"
             subtitle="Latest savings activity"
-            href="/staff-dashboard/deposits"
+            href="/admin-dashboard/deposits"
           />
 
           {recentTx.length === 0 ? (
@@ -1570,7 +1577,7 @@ export default function StaffDashboard() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-bold text-white truncate">
-                        {tx.memberName}
+                        {tx.clientName}
                       </p>
                       <p
                         className="text-[10px]"
@@ -1618,7 +1625,7 @@ export default function StaffDashboard() {
           <SectionHeader
             title="Recent Loan Applications"
             subtitle="Latest submissions"
-            href="/staff-dashboard/loans/applications"
+            href="/admin-dashboard/loans"
           />
 
           {recentLoans.length === 0 ? (
@@ -1652,12 +1659,12 @@ export default function StaffDashboard() {
                         color: "#0B1D3A",
                       }}
                     >
-                      {initials(loan.memberName)}
+                      {initials(loan.clientName)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
                         <p className="text-xs font-bold text-white truncate">
-                          {loan.memberName}
+                          {loan.clientName}
                         </p>
                         <span
                           className="text-[9px] font-black px-1.5 py-0.5 rounded-full shrink-0 uppercase"

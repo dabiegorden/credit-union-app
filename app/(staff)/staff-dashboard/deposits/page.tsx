@@ -33,9 +33,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 
 /* ─── Types ──────────────────────────────────────────────────────────────── */
-interface PopulatedMember {
+interface PopulatedClient {
   _id: string;
-  memberId: string;
+  clientId: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -63,7 +63,7 @@ interface PopulatedUser {
 interface SavingsTransaction {
   _id: string;
   accountId: PopulatedAccount;
-  memberId: PopulatedMember;
+  clientId: PopulatedClient;
   transactionType: "deposit" | "withdrawal";
   amount: number;
   balanceAfter: number;
@@ -125,7 +125,7 @@ function fmt(n: number) {
   return `GH₵${n.toLocaleString("en-GH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-function initials(m: PopulatedMember) {
+function initials(m: PopulatedClient) {
   return (m?.firstName[0] + m?.lastName[0])?.toUpperCase();
 }
 
@@ -290,7 +290,7 @@ function PgBtn({
 }
 
 /* ─── Main Page ──────────────────────────────────────────────────────────── */
-export default function StaffDepositsPage() {
+export default function AdminDepositsPage() {
   const [transactions, setTransactions] = useState<SavingsTransaction[]>([]);
   const [pagination, setPagination] = useState<Pagination>({
     total: 0,
@@ -315,10 +315,10 @@ export default function StaffDepositsPage() {
   const [delLoading, setDelLoading] = useState(false);
 
   /* record-deposit form */
-  const [allMembers, setAllMembers] = useState<PopulatedMember[]>([]);
+  const [allMembers, setAllMembers] = useState<PopulatedClient[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
   const [memberFilter, setMemberFilter] = useState("");
-  const [chosenMember, setChosenMember] = useState<PopulatedMember | null>(
+  const [chosenMember, setChosenMember] = useState<PopulatedClient | null>(
     null,
   );
 
@@ -394,36 +394,36 @@ export default function StaffDepositsPage() {
     };
   }, [search, typeFilter, fromDate, toDate, fetchTransactions]);
 
-  /* ── Fetch all active members ── */
+  /* ── Fetch all active clients ── */
   const fetchAllMembers = useCallback(async () => {
     setMembersLoading(true);
     try {
-      const res = await fetch("/api/members?limit=200&status=active", {
+      const res = await fetch("/api/clients?limit=200&status=active", {
         credentials: "include",
       });
       const data = await res.json();
-      setAllMembers(data.members ?? []);
+      setAllMembers(data.clients ?? []);
     } catch {
-      toast.error("Could not load members");
+      toast.error("Could not load clients. Please try again.");
     } finally {
       setMembersLoading(false);
     }
   }, []);
 
   /* ── Fetch accounts for a chosen member ── */
-  const fetchMemberAccounts = useCallback(async (memberId: string) => {
+  const fetchMemberAccounts = useCallback(async (clientId: string) => {
     setAcctLoading(true);
     setMemberAccounts([]);
     setChosenAccount(null);
     try {
       const res = await fetch(
-        `/api/savings/accounts?memberId=${memberId}&status=active`,
+        `/api/savings/accounts?clientId=${clientId}&status=active`,
         { credentials: "include" },
       );
       const data = await res.json();
       setMemberAccounts(data.accounts ?? []);
     } catch {
-      toast.error("Could not load accounts for this member");
+      toast.error("Could not load accounts for this client");
     } finally {
       setAcctLoading(false);
     }
@@ -555,10 +555,10 @@ export default function StaffDepositsPage() {
     ? transactions.filter((t) => {
         const q = search.toLowerCase();
         const name =
-          `${t.memberId?.firstName} ${t.memberId?.lastName}`.toLowerCase();
+          `${t.clientId?.firstName} ${t.clientId?.lastName}`.toLowerCase();
         return (
           name.includes(q) ||
-          t.memberId?.memberId?.toLowerCase().includes(q) ||
+          t.clientId?.clientId?.toLowerCase().includes(q) ||
           t.accountId?.accountNumber?.toLowerCase().includes(q)
         );
       })
@@ -884,17 +884,17 @@ export default function StaffDepositsPage() {
                         color: "#0B1D3A",
                       }}
                     >
-                      {tx.memberId ? initials(tx.memberId) : "??"}
+                      {tx.clientId ? initials(tx.clientId) : "??"}
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-white truncate">
-                        {tx.memberId?.firstName} {tx.memberId?.lastName}
+                        {tx.clientId?.firstName} {tx.clientId?.lastName}
                       </p>
                       <p
                         className="text-[10px] font-medium truncate"
                         style={{ color: "#E4B86A" }}
                       >
-                        {tx.memberId?.memberId}
+                        {tx.clientId?.clientId}
                       </p>
                     </div>
                   </div>
@@ -1183,7 +1183,7 @@ export default function StaffDepositsPage() {
                         className="text-[11px] mt-0.5"
                         style={{ color: "rgba(255,255,255,0.4)" }}
                       >
-                        {chosenMember.memberId} · {chosenMember.email}
+                        {chosenMember.clientId} · {chosenMember.email}
                       </p>
                     </div>
                     <button
@@ -1255,7 +1255,7 @@ export default function StaffDepositsPage() {
                               `${m.firstName} ${m.lastName}`
                                 .toLowerCase()
                                 .includes(q) ||
-                              m.memberId.toLowerCase().includes(q) ||
+                              m.clientId.toLowerCase().includes(q) ||
                               m.email.toLowerCase().includes(q),
                           );
                           return filtered.length === 0 ? (
@@ -1308,7 +1308,7 @@ export default function StaffDepositsPage() {
                                     className="text-[11px] truncate"
                                     style={{ color: "rgba(255,255,255,0.38)" }}
                                   >
-                                    {m.memberId} · {m.email}
+                                    {m.clientId} · {m.email}
                                   </p>
                                 </div>
                                 <span
@@ -1682,8 +1682,8 @@ export default function StaffDepositsPage() {
                 {[
                   {
                     icon: User,
-                    label: "Member",
-                    value: `${selected.memberId?.firstName} ${selected.memberId?.lastName} (${selected.memberId?.memberId})`,
+                    label: "Client",
+                    value: `${selected.clientId?.firstName} ${selected.clientId?.lastName} (${selected.clientId?.clientId})`,
                   },
                   {
                     icon: Hash,
@@ -1818,7 +1818,7 @@ export default function StaffDepositsPage() {
                     className="text-[11px]"
                     style={{ color: "rgba(255,255,255,0.38)" }}
                   >
-                    {selected.memberId?.firstName} {selected.memberId?.lastName}{" "}
+                    {selected.clientId?.firstName} {selected.clientId?.lastName}{" "}
                     · {selected.accountId?.accountNumber}
                   </p>
                 </div>
@@ -1950,8 +1950,8 @@ export default function StaffDepositsPage() {
                       Member
                     </span>
                     <span className="text-white font-semibold">
-                      {selected.memberId?.firstName}{" "}
-                      {selected.memberId?.lastName}
+                      {selected.clientId?.firstName}{" "}
+                      {selected.clientId?.lastName}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">

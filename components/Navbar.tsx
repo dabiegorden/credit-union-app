@@ -34,14 +34,14 @@ const NAV_LINKS = [
 const ROLE_DASHBOARD: Record<string, string> = {
   admin: "/admin-dashboard",
   staff: "/staff-dashboard",
-  member: "/member-dashboard",
+  client: "/client-dashboard",
 };
 
 interface AuthUser {
   id: string;
   name: string;
   email: string;
-  role: "admin" | "staff" | "member";
+  role: "admin" | "staff" | "client";
 }
 
 function getInitials(name: string) {
@@ -100,7 +100,7 @@ export default function Navbar() {
 
   const closeDrawer = () => setOpen(false);
   const dashboardHref = user
-    ? (ROLE_DASHBOARD[user.role] ?? "/member-dashboard")
+    ? (ROLE_DASHBOARD[user.role] ?? "/client-dashboard")
     : "/login";
 
   return (
