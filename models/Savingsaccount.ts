@@ -5,7 +5,7 @@ export type AccountStatus = "active" | "dormant" | "closed";
 
 export interface ISavingsAccount extends Document {
   accountNumber: string; // auto-generated e.g. SAV-00001
-  memberId: mongoose.Types.ObjectId;
+  clientId: mongoose.Types.ObjectId;
   accountType: AccountType;
   accountName: string; // display label e.g. "Regular Savings"
   balance: number;
@@ -23,10 +23,10 @@ const SavingsAccountSchema = new Schema<ISavingsAccount>(
       unique: true,
       // set by pre-save hook
     },
-    memberId: {
+    clientId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Member",
-      required: [true, "Member is required"],
+      ref: "Client",
+      required: [true, "Client is required"],
     },
     accountType: {
       type: String,

@@ -72,9 +72,9 @@ export async function PUT(
     }
 
     // Validate role
-    if (role && !["staff", "member"].includes(role)) {
+    if (role && !["staff", "client"].includes(role)) {
       return NextResponse.json(
-        { error: "Role must be 'staff' or 'member'" },
+        { error: "Role must be 'staff' or 'client'" },
         { status: 400 },
       );
     }

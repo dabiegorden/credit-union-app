@@ -1,14 +1,14 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export type LoanStatus =
-  | "pending" // submitted, awaiting review
-  | "under_review" // staff/admin reviewing
-  | "approved" // approved, funds not yet disbursed
-  | "active" // disbursed and being repaid
-  | "overdue" // missed payment(s)
-  | "paid" // fully repaid
-  | "rejected" // application rejected
-  | "cancelled"; // withdrawn by member
+  | "pending"
+  | "under_review"
+  | "approved"
+  | "active"
+  | "overdue"
+  | "paid"
+  | "rejected"
+  | "cancelled";
 
 export type LoanPurpose =
   | "business"
@@ -20,74 +20,61 @@ export type LoanPurpose =
   | "other";
 
 export interface ILoan extends Document {
-  loanId: string; // auto-generated e.g. LN-00001
-  memberId: mongoose.Types.ObjectId; // ref: Member
+  loanId: string;
+  clientId: mongoose.Types.ObjectId;
   applicationDate: Date;
   loanAmount: number;
-  interestRate: number; // annual % e.g. 18
-  loanDurationMonths: number; // term in months
+  // Interest rate management
+  baseInterestRate: number; // system base rate (annual %)
+  amountSurcharge: number; // small rate added based on loan size
+  finalInterestRate: number; // base + surcharge + any manual override
+  interestRateSetBy?: mongoose.Types.ObjectId; // staff/admin who last adjusted
+  loanDurationMonths: number;
   purpose: LoanPurpose;
   purposeDescription?: string;
-  monthlyRepayment: number; // calculated: (principal + interest) / months
-  totalPayable: number; // loanAmount + total interest
+  monthlyRepayment: number;
+  totalPayable: number;
   totalInterest: number;
   amountPaid: number;
-  outstandingBalance: number; // totalPayable - amountPaid
-  penaltyAmount: number; // accumulated late-payment charges
+  outstandingBalance: number;
+  penaltyAmount: number;
   status: LoanStatus;
-  // Approval
-  reviewedBy?: mongoose.Types.ObjectId; // staff who reviewed
-  approvedBy?: mongoose.Types.ObjectId; // admin who approved
+  reviewedBy?: mongoose.Types.ObjectId;
+  approvedBy?: mongoose.Types.ObjectId;
   reviewDate?: Date;
   approvalDate?: Date;
   rejectionReason?: string;
-  // Disbursement
   disbursementDate?: Date;
-  dueDate?: Date; // final repayment due date
+  dueDate?: Date;
   nextPaymentDate?: Date;
-  // Eligibility snapshot (stored at application time)
-  eligibilityScore: number; // 0–100
+  eligibilityScore: number;
   savingsBalanceAtApplication: number;
   creditHistory: "good" | "fair" | "poor" | "no_history";
-  // Metadata
   notes?: string;
-  appliedBy: mongoose.Types.ObjectId; // user who created application (member/staff/admin)
+  appliedBy: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
 
 const LoanSchema = new Schema<ILoan>(
   {
-    loanId: {
-      type: String,
-      unique: true,
-    },
-    memberId: {
+    loanId: { type: String, unique: true },
+    clientId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Member",
-      required: [true, "Member is required"],
+      ref: "Client",
+      required: true,
     },
-    applicationDate: {
-      type: Date,
-      default: Date.now,
+    applicationDate: { type: Date, default: Date.now },
+    loanAmount: { type: Number, required: true, min: 100 },
+    baseInterestRate: { type: Number, required: true, min: 0, max: 100 },
+    amountSurcharge: { type: Number, default: 0, min: 0 },
+    finalInterestRate: { type: Number, required: true, min: 0, max: 100 },
+    interestRateSetBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
     },
-    loanAmount: {
-      type: Number,
-      required: [true, "Loan amount is required"],
-      min: [100, "Minimum loan amount is GH₵100"],
-    },
-    interestRate: {
-      type: Number,
-      required: [true, "Interest rate is required"],
-      min: 0,
-      max: 100,
-    },
-    loanDurationMonths: {
-      type: Number,
-      required: [true, "Loan duration is required"],
-      min: [1, "Minimum 1 month"],
-      max: [60, "Maximum 60 months"],
-    },
+    loanDurationMonths: { type: Number, required: true, min: 1, max: 60 },
     purpose: {
       type: String,
       enum: [
@@ -99,41 +86,15 @@ const LoanSchema = new Schema<ILoan>(
         "agriculture",
         "other",
       ],
-      required: [true, "Loan purpose is required"],
-    },
-    purposeDescription: {
-      type: String,
-      trim: true,
-    },
-    monthlyRepayment: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-    totalPayable: {
-      type: Number,
       required: true,
     },
-    totalInterest: {
-      type: Number,
-      required: true,
-    },
-    amountPaid: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-    outstandingBalance: {
-      type: Number,
-      default: function (this: ILoan) {
-        return this.totalPayable;
-      },
-    },
-    penaltyAmount: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
+    purposeDescription: { type: String, trim: true },
+    monthlyRepayment: { type: Number, required: true, min: 0 },
+    totalPayable: { type: Number, required: true },
+    totalInterest: { type: Number, required: true },
+    amountPaid: { type: Number, default: 0, min: 0 },
+    outstandingBalance: { type: Number, required: true },
+    penaltyAmount: { type: Number, default: 0, min: 0 },
     status: {
       type: String,
       enum: [
@@ -175,13 +136,12 @@ const LoanSchema = new Schema<ILoan>(
     appliedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: [true, "Applied by is required"],
+      required: true,
     },
   },
   { timestamps: true },
 );
 
-// Auto-generate loanId
 LoanSchema.pre("save", async function () {
   if (!this.loanId) {
     const count = await mongoose.model("Loan").countDocuments();
@@ -189,8 +149,7 @@ LoanSchema.pre("save", async function () {
   }
 });
 
-// Indexes for common queries
-LoanSchema.index({ memberId: 1, status: 1 });
+LoanSchema.index({ clientId: 1, status: 1 });
 LoanSchema.index({ status: 1, applicationDate: -1 });
 LoanSchema.index({ nextPaymentDate: 1, status: 1 });
 

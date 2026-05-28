@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
+import Client from "@/models/Client";
 import { generateToken } from "@/lib/jwt";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { email, password } = body;
+    const { email, password, portalType } = await request.json();
+    // portalType: "staff" (admin/staff login) | "client" (client portal)
 
     if (!email || !password) {
       return NextResponse.json(
@@ -17,60 +18,85 @@ export async function POST(request: NextRequest) {
 
     await connectDB();
 
-    // Find user and include password
+    if (portalType === "client") {
+      // Client portal login
+      const client = await Client.findOne({ email }).select("+password");
+      if (!client || !(await client.comparePassword(password))) {
+        return NextResponse.json(
+          { error: "Invalid email or password" },
+          { status: 401 },
+        );
+      }
+      if (client.status !== "active") {
+        return NextResponse.json(
+          { error: "Your account is not active. Please contact support." },
+          { status: 403 },
+        );
+      }
+
+      await Client.findByIdAndUpdate(client._id, { lastLogin: new Date() });
+
+      const token = generateToken({
+        userId: client._id.toString(),
+        email: client.email,
+        role: "client",
+      });
+
+      const res = NextResponse.json({
+        success: true,
+        message: "Login successful",
+        token,
+        user: {
+          id: client._id,
+          name: `${client.firstName} ${client.lastName}`,
+          email: client.email,
+          role: "client",
+        },
+      });
+      res.cookies.set("token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 7 * 24 * 60 * 60,
+      });
+      return res;
+    }
+
+    // Staff / Admin portal login
     const user = await User.findOne({ email }).select("+password");
-
-    if (!user) {
+    if (!user || !(await user.comparePassword(password))) {
       return NextResponse.json(
         { error: "Invalid email or password" },
         { status: 401 },
       );
     }
 
-    // Compare password
-    const isPasswordValid = await user.comparePassword(password);
-
-    if (!isPasswordValid) {
-      return NextResponse.json(
-        { error: "Invalid email or password" },
-        { status: 401 },
-      );
-    }
-
-    // Generate JWT
     const token = generateToken({
       userId: user._id.toString(),
       email: user.email,
       role: user.role,
     });
 
-    const response = NextResponse.json(
-      {
-        success: true,
-        message: "Login successful",
-        token,
-        user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-        },
+    const res = NextResponse.json({
+      success: true,
+      message: "Login successful",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
       },
-      { status: 200 },
-    );
-
-    // Store token in cookie
-    response.cookies.set("token", token, {
+    });
+    res.cookies.set("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 7 * 24 * 60 * 60,
     });
-
-    return response;
+    return res;
   } catch (error) {
     console.error("Login error:", error);
-
     return NextResponse.json({ error: "Login failed" }, { status: 500 });
   }
 }

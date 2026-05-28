@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import SavingsAccount from "@/models/Savingsaccount";
 import SavingsTransaction from "@/models/Savingstransaction";
-import Member from "@/models/Member";
 import { authMiddleware } from "@/middleware/Authmiddleware";
 import { z } from "zod";
+import Client from "@/models/Client";
 
 const updateTxSchema = z.object({
   description: z.string().trim().optional(),
@@ -28,7 +28,7 @@ export async function GET(
         "accountId",
         "accountNumber accountType accountName balance status",
       )
-      .populate("memberId", "memberId firstName lastName email")
+      .populate("clientId", "clientId firstName lastName email")
       .populate("recordedBy", "name email role")
       .lean();
 
@@ -39,13 +39,12 @@ export async function GET(
       );
     }
 
-    // Members can only see their own transactions
-    if (auth.user?.role === "member") {
-      const member = await Member.findOne({ userId: auth.user.userId });
-      const txMemberId = (
-        transaction.memberId as { _id: unknown }
+    // Clients can only see their own transactions
+    if (auth.user?.role === "client") {
+      const txClientId = (
+        transaction.clientId as { _id: unknown }
       )._id?.toString();
-      if (!member || member._id.toString() !== txMemberId) {
+      if (auth.user.userId !== txClientId) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
     }
@@ -106,7 +105,7 @@ export async function PUT(
       "accountId",
       "accountNumber accountType accountName",
     );
-    await transaction.populate("memberId", "memberId firstName lastName");
+    await transaction.populate("clientId", "clientId firstName lastName email");
     await transaction.populate("recordedBy", "name email role");
 
     return NextResponse.json({
@@ -124,7 +123,7 @@ export async function PUT(
 }
 
 // ─── DELETE /api/savings/transactions/[id] ───────────────────────────────────
-// Admin only — reverses the transaction and restores account + member balance
+// Admin only — reverses the transaction and restores account + client balance
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -173,8 +172,8 @@ export async function DELETE(
     account.balance = newAccountBalance;
     await account.save();
 
-    // Keep Member.savingsBalance in sync
-    await Member.findByIdAndUpdate(transaction.memberId, {
+    // Keep Client.savingsBalance in sync
+    await Client.findByIdAndUpdate(transaction.clientId, {
       $inc: { savingsBalance: reversalAmount },
     });
 

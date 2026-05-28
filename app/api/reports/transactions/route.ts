@@ -9,7 +9,7 @@
  *   to          — ISO date string (default: today)
  *   groupBy     — "day" | "week" | "month" (default: "day")
  *   accountType — "regular" | "fixed" | "susu" | "" (all)
- *   memberId    — filter by specific member
+ *   clientId    — filter by specific client
  *   export      — "1" → returns flat rows for Excel, "0" → returns aggregates
  */
 
@@ -17,7 +17,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import SavingsTransaction from "@/models/Savingstransaction";
 import SavingsAccount from "@/models/Savingsaccount";
-import Member from "@/models/Member";
 import { authMiddleware } from "@/middleware/Authmiddleware";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -43,16 +42,16 @@ export async function GET(request: NextRequest) {
       | "week"
       | "month";
     const accountType = searchParams.get("accountType") || "";
-    const memberIdStr = searchParams.get("memberId") || "";
+    const clientIdStr = searchParams.get("clientId") || "";
     const isExport = searchParams.get("export") === "1";
 
     /* ── Base match ── */
     const match: Record<string, unknown> = {
       date: { $gte: fromDate, $lte: toDate },
     };
-    if (memberIdStr)
-      match.memberId = new (await import("mongoose")).default.Types.ObjectId(
-        memberIdStr,
+    if (clientIdStr)
+      match.clientId = new (await import("mongoose")).default.Types.ObjectId(
+        clientIdStr,
       );
 
     /* If accountType filter, find matching accountIds first */
@@ -66,7 +65,7 @@ export async function GET(request: NextRequest) {
     /* ── Export mode — return flat rows ── */
     if (isExport) {
       const rows = await SavingsTransaction.find(match)
-        .populate("memberId", "memberId firstName lastName email")
+        .populate("clientId", "clientId firstName lastName email")
         .populate("accountId", "accountNumber accountType accountName")
         .populate("recordedBy", "name role")
         .sort({ date: -1 })
@@ -74,8 +73,8 @@ export async function GET(request: NextRequest) {
         .lean();
 
       const flat = rows.map((r) => {
-        const m = r.memberId as unknown as {
-          memberId: string;
+        const m = r.clientId as unknown as {
+          clientId: string;
           firstName: string;
           lastName: string;
           email: string;
@@ -94,9 +93,9 @@ export async function GET(request: NextRequest) {
           Type: r.transactionType,
           Amount: r.amount,
           "Balance After": r.balanceAfter,
-          "Member ID": m?.memberId ?? "",
-          "Member Name": m ? `${m.firstName} ${m.lastName}` : "",
-          "Member Email": m?.email ?? "",
+          "Client ID": m?.clientId ?? "",
+          "Client Name": m ? `${m.firstName} ${m.lastName}` : "",
+          "Client Email": m?.email ?? "",
           "Account Number": a?.accountNumber ?? "",
           "Account Type": a?.accountType ?? "",
           "Account Name": a?.accountName ?? "",
@@ -208,12 +207,12 @@ export async function GET(request: NextRequest) {
       },
     ]);
 
-    /* 4. Top 10 most active members */
-    const topMembers = await SavingsTransaction.aggregate([
+    /* 4. Top 10 most active clients */
+    const topClients = await SavingsTransaction.aggregate([
       { $match: match },
       {
         $group: {
-          _id: "$memberId",
+          _id: "$clientId",
           totalAmount: { $sum: "$amount" },
           count: { $sum: 1 },
           deposits: {
@@ -236,17 +235,17 @@ export async function GET(request: NextRequest) {
       { $limit: 10 },
       {
         $lookup: {
-          from: "members",
+          from: "clients",
           localField: "_id",
           foreignField: "_id",
-          as: "member",
+          as: "client",
         },
       },
-      { $unwind: "$member" },
+      { $unwind: "$client" },
       {
         $project: {
-          memberId: "$member.memberId",
-          name: { $concat: ["$member.firstName", " ", "$member.lastName"] },
+          clientId: "$client.clientId",
+          name: { $concat: ["$client.firstName", " ", "$client.lastName"] },
           totalAmount: 1,
           count: 1,
           deposits: 1,
@@ -309,7 +308,7 @@ export async function GET(request: NextRequest) {
       timeSeriesData,
       typeTotals,
       accountTypeBreakdown,
-      topMembers,
+      topClients,
     });
   } catch (err: unknown) {
     console.error("[GET /api/reports/transactions]", err);

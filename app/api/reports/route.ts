@@ -1,62 +1,56 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
-import Member from "@/models/Member";
-import Savings from "@/models/Savings";
+import Client from "@/models/Client";
+import SavingsTransaction from "@/models/Savingstransaction";
 import Loan from "@/models/Loan";
 import LoanRepayment from "@/models/LoanRepayment";
 import ExcelJS from "exceljs";
 import { authMiddleware } from "@/middleware/Authmiddleware";
 
-// GET - Dashboard statistics
+// GET - Basic dashboard statistics (lightweight, for non-dashboard pages)
 export async function GET(request: NextRequest) {
   try {
-    const auth = await authMiddleware(request, ["admin", "staff", "member"]);
+    const auth = await authMiddleware(request, ["admin", "staff", "client"]);
     if (!auth.isValid) return auth.response!;
 
     await connectDB();
 
-    const totalMembers = await Member.countDocuments({ status: "active" });
-    const totalSavings = await Member.aggregate([
-      {
-        $group: {
-          _id: null,
-          total: { $sum: "$savingsBalance" },
+    const [
+      totalClients,
+      savingsAgg,
+      activeLoans,
+      totalLoans,
+      outstandingAgg,
+      todayTx,
+    ] = await Promise.all([
+      Client.countDocuments({ status: "active" }),
+      Client.aggregate([
+        { $group: { _id: null, total: { $sum: "$savingsBalance" } } },
+      ]),
+      Loan.countDocuments({ status: "active" }),
+      Loan.countDocuments(),
+      Loan.aggregate([
+        { $match: { status: { $in: ["active", "pending"] } } },
+        { $group: { _id: null, total: { $sum: "$outstandingBalance" } } },
+      ]),
+      SavingsTransaction.countDocuments({
+        date: {
+          $gte: new Date(new Date().setHours(0, 0, 0, 0)),
+          $lte: new Date(new Date().setHours(23, 59, 59, 999)),
         },
-      },
+      }),
     ]);
 
-    const activeLoans = await Loan.countDocuments({ status: "active" });
-    const totalLoans = await Loan.countDocuments();
-    const loanAmountOutstanding = await Loan.aggregate([
-      { $match: { status: { $in: ["active", "pending"] } } },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: { $subtract: ["$totalPayable", "$amountPaid"] } },
-        },
-      },
-    ]);
-
-    const todayTransactions = await Savings.countDocuments({
-      date: {
-        $gte: new Date(new Date().setHours(0, 0, 0, 0)),
-        $lte: new Date(new Date().setHours(23, 59, 59, 999)),
+    return NextResponse.json({
+      dashboard: {
+        totalClients,
+        totalSavings: savingsAgg[0]?.total || 0,
+        activeLoans,
+        totalLoans,
+        loanAmountOutstanding: outstandingAgg[0]?.total || 0,
+        todayTransactions: todayTx,
       },
     });
-
-    return NextResponse.json(
-      {
-        dashboard: {
-          totalMembers,
-          totalSavings: totalSavings[0]?.total || 0,
-          activeLoans,
-          totalLoans,
-          loanAmountOutstanding: loanAmountOutstanding[0]?.total || 0,
-          todayTransactions,
-        },
-      },
-      { status: 200 },
-    );
   } catch (error) {
     console.error("Get reports error:", error);
     return NextResponse.json(
@@ -73,21 +67,19 @@ export async function POST(request: NextRequest) {
     if (!auth.isValid) return auth.response!;
 
     const { reportType } = await request.json();
-
     await connectDB();
 
     const workbook = new ExcelJS.Workbook();
 
     if (!reportType || reportType === "all") {
-      // Generate all reports
-      await generateMembersReport(workbook);
+      await generateClientsReport(workbook);
       await generateSavingsReport(workbook);
       await generateLoansReport(workbook);
       await generateRepaymentReport(workbook);
     } else {
       switch (reportType) {
-        case "members":
-          await generateMembersReport(workbook);
+        case "clients":
+          await generateClientsReport(workbook);
           break;
         case "savings":
           await generateSavingsReport(workbook);
@@ -107,13 +99,12 @@ export async function POST(request: NextRequest) {
     }
 
     const buffer = await workbook.xlsx.writeBuffer();
-
     return new NextResponse(buffer, {
       status: 200,
       headers: {
         "Content-Type":
           "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition": `attachment; filename="credit-union-report-${Date.now()}.xlsx"`,
+        "Content-Disposition": `attachment; filename="report-${Date.now()}.xlsx"`,
       },
     });
   } catch (error) {
@@ -125,58 +116,61 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function generateMembersReport(workbook: ExcelJS.Workbook) {
-  const worksheet = workbook.addWorksheet("Members");
-  const members = await Member.find().sort({ dateJoined: -1 });
+async function generateClientsReport(workbook: ExcelJS.Workbook) {
+  const worksheet = workbook.addWorksheet("Clients");
+  const clients = await Client.find().sort({ createdAt: -1 }).lean();
 
   worksheet.columns = [
-    { header: "Member ID", key: "memberId", width: 15 },
+    { header: "Client ID", key: "clientId", width: 15 },
     { header: "First Name", key: "firstName", width: 15 },
     { header: "Last Name", key: "lastName", width: 15 },
-    { header: "Email", key: "email", width: 20 },
+    { header: "Email", key: "email", width: 25 },
     { header: "Phone", key: "phone", width: 15 },
     { header: "Status", key: "status", width: 12 },
     { header: "Savings Balance", key: "savingsBalance", width: 15 },
-    { header: "Date Joined", key: "dateJoined", width: 15 },
+    { header: "Date Registered", key: "createdAt", width: 18 },
   ];
 
-  members.forEach((member) => {
+  clients.forEach((c: any) => {
     worksheet.addRow({
-      memberId: member.memberId,
-      firstName: member.firstName,
-      lastName: member.lastName,
-      email: member.email,
-      phone: member.phone,
-      status: member.status,
-      savingsBalance: member.savingsBalance,
-      dateJoined: member.dateJoined.toLocaleDateString(),
+      clientId: c.clientId,
+      firstName: c.firstName,
+      lastName: c.lastName,
+      email: c.email,
+      phone: c.phone,
+      status: c.status,
+      savingsBalance: c.savingsBalance,
+      createdAt: new Date(c.createdAt).toLocaleDateString(),
     });
   });
 }
 
 async function generateSavingsReport(workbook: ExcelJS.Workbook) {
   const worksheet = workbook.addWorksheet("Savings");
-  const transactions = await Savings.find()
-    .populate("memberId", "memberId firstName lastName")
-    .sort({ date: -1 });
+  const transactions = await SavingsTransaction.find()
+    .populate("clientId", "clientId firstName lastName")
+    .sort({ date: -1 })
+    .lean();
 
   worksheet.columns = [
-    { header: "Member ID", key: "memberId", width: 15 },
-    { header: "Member Name", key: "memberName", width: 20 },
+    { header: "Client ID", key: "clientId", width: 15 },
+    { header: "Client Name", key: "clientName", width: 22 },
     { header: "Type", key: "transactionType", width: 12 },
-    { header: "Amount", key: "amount", width: 12 },
+    { header: "Amount", key: "amount", width: 14 },
     { header: "Balance After", key: "balanceAfter", width: 15 },
     { header: "Date", key: "date", width: 15 },
   ];
 
-  transactions.forEach((tx) => {
+  transactions.forEach((tx: any) => {
     worksheet.addRow({
-      memberId: (tx.memberId as any).memberId,
-      memberName: `${(tx.memberId as any).firstName} ${(tx.memberId as any).lastName}`,
+      clientId: tx.clientId?.clientId ?? "",
+      clientName: tx.clientId
+        ? `${tx.clientId.firstName} ${tx.clientId.lastName}`
+        : "",
       transactionType: tx.transactionType,
       amount: tx.amount,
       balanceAfter: tx.balanceAfter,
-      date: tx.date.toLocaleDateString(),
+      date: new Date(tx.date).toLocaleDateString(),
     });
   });
 }
@@ -184,30 +178,39 @@ async function generateSavingsReport(workbook: ExcelJS.Workbook) {
 async function generateLoansReport(workbook: ExcelJS.Workbook) {
   const worksheet = workbook.addWorksheet("Loans");
   const loans = await Loan.find()
-    .populate("memberId", "memberId firstName lastName")
-    .sort({ dateApplied: -1 });
+    .populate("clientId", "clientId firstName lastName")
+    .sort({ applicationDate: -1 })
+    .lean();
 
   worksheet.columns = [
-    { header: "Member ID", key: "memberId", width: 15 },
-    { header: "Member Name", key: "memberName", width: 20 },
-    { header: "Loan Amount", key: "loanAmount", width: 12 },
-    { header: "Interest Rate", key: "interestRate", width: 12 },
-    { header: "Total Payable", key: "totalPayable", width: 12 },
+    { header: "Loan ID", key: "loanId", width: 14 },
+    { header: "Client ID", key: "clientId", width: 14 },
+    { header: "Client Name", key: "clientName", width: 22 },
+    { header: "Loan Amount", key: "loanAmount", width: 14 },
+    { header: "Interest Rate", key: "finalInterestRate", width: 14 },
+    { header: "Total Payable", key: "totalPayable", width: 14 },
     { header: "Amount Paid", key: "amountPaid", width: 12 },
+    { header: "Outstanding", key: "outstandingBalance", width: 14 },
     { header: "Status", key: "status", width: 12 },
-    { header: "Applied Date", key: "dateApplied", width: 15 },
+    { header: "Applied Date", key: "applicationDate", width: 15 },
   ];
 
-  loans.forEach((loan) => {
+  loans.forEach((l: any) => {
     worksheet.addRow({
-      memberId: (loan.memberId as any).memberId,
-      memberName: `${(loan.memberId as any).firstName} ${(loan.memberId as any).lastName}`,
-      loanAmount: loan.loanAmount,
-      interestRate: loan.interestRate,
-      totalPayable: loan.totalPayable,
-      amountPaid: loan.amountPaid,
-      status: loan.status,
-      dateApplied: loan.dateApplied.toLocaleDateString(),
+      loanId: l.loanId,
+      clientId: l.clientId?.clientId ?? "",
+      clientName: l.clientId
+        ? `${l.clientId.firstName} ${l.clientId.lastName}`
+        : "",
+      loanAmount: l.loanAmount,
+      finalInterestRate: l.finalInterestRate,
+      totalPayable: l.totalPayable,
+      amountPaid: l.amountPaid,
+      outstandingBalance: l.outstandingBalance,
+      status: l.status,
+      applicationDate: l.applicationDate
+        ? new Date(l.applicationDate).toLocaleDateString()
+        : "",
     });
   });
 }
@@ -215,22 +218,42 @@ async function generateLoansReport(workbook: ExcelJS.Workbook) {
 async function generateRepaymentReport(workbook: ExcelJS.Workbook) {
   const worksheet = workbook.addWorksheet("Repayments");
   const repayments = await LoanRepayment.find()
-    .populate("loanId", "loanAmount totalPayable")
-    .sort({ date: -1 });
+    .populate("loanId", "loanId loanAmount totalPayable")
+    .populate("clientId", "clientId firstName lastName")
+    .sort({ paymentDate: -1 })
+    .lean();
 
   worksheet.columns = [
-    { header: "Loan Amount", key: "loanAmount", width: 12 },
-    { header: "Amount Paid", key: "amountPaid", width: 12 },
-    { header: "Balance Remaining", key: "balanceRemaining", width: 15 },
-    { header: "Date", key: "date", width: 15 },
+    { header: "Repayment ID", key: "repaymentId", width: 15 },
+    { header: "Loan ID", key: "loanId", width: 14 },
+    { header: "Client ID", key: "clientId", width: 14 },
+    { header: "Client Name", key: "clientName", width: 22 },
+    { header: "Amount Paid", key: "amount", width: 14 },
+    { header: "Principal", key: "principalPortion", width: 12 },
+    { header: "Interest", key: "interestPortion", width: 12 },
+    { header: "Penalty", key: "penaltyPortion", width: 12 },
+    { header: "Balance Before", key: "outstandingBalanceBefore", width: 16 },
+    { header: "Balance After", key: "outstandingBalanceAfter", width: 16 },
+    { header: "Method", key: "method", width: 15 },
+    { header: "Payment Date", key: "paymentDate", width: 15 },
   ];
 
-  repayments.forEach((rep) => {
+  repayments.forEach((r: any) => {
     worksheet.addRow({
-      loanAmount: (rep.loanId as any).loanAmount,
-      amountPaid: rep.amountPaid,
-      balanceRemaining: rep.balanceRemaining,
-      date: rep.date.toLocaleDateString(),
+      repaymentId: r.repaymentId,
+      loanId: r.loanId?.loanId ?? "",
+      clientId: r.clientId?.clientId ?? "",
+      clientName: r.clientId
+        ? `${r.clientId.firstName} ${r.clientId.lastName}`
+        : "",
+      amount: r.amount,
+      principalPortion: r.principalPortion,
+      interestPortion: r.interestPortion,
+      penaltyPortion: r.penaltyPortion,
+      outstandingBalanceBefore: r.outstandingBalanceBefore,
+      outstandingBalanceAfter: r.outstandingBalanceAfter,
+      method: r.method,
+      paymentDate: new Date(r.paymentDate).toLocaleDateString(),
     });
   });
 }

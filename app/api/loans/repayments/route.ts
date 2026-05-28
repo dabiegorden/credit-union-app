@@ -13,7 +13,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Loan from "@/models/Loan";
 import LoanRepayment from "@/models/LoanRepayment";
-import Member from "@/models/Member";
+import Client from "@/models/Client";
 import { authMiddleware } from "@/middleware/Authmiddleware";
 import { DAILY_PENALTY_RATE } from "@/models/LoanEligibility";
 import { z } from "zod";
@@ -49,18 +49,13 @@ export async function GET(request: NextRequest) {
 
     const query: Record<string, unknown> = {};
 
-    if (auth.user?.role === "member") {
-      const member = await Member.findOne({ userId: auth.user.userId });
-      if (!member) {
-        return NextResponse.json(
-          { error: "Member profile not found" },
-          { status: 404 },
-        );
-      }
-      query.memberId = member._id;
+    // Replace the client lookup block in GET:
+    if (auth.user?.role === "client") {
+      // Client's _id IS their userId in the JWT — direct lookup, no findOne needed
+      query.clientId = auth.user.userId;
     } else {
-      const memberId = searchParams.get("memberId");
-      if (memberId) query.memberId = memberId;
+      const clientId = searchParams.get("clientId");
+      if (clientId) query.clientId = clientId;
     }
 
     if (loanId) query.loanId = loanId;
@@ -79,7 +74,7 @@ export async function GET(request: NextRequest) {
           "loanId",
           "loanId loanAmount status outstandingBalance interestRate loanDurationMonths",
         )
-        .populate("memberId", "memberId firstName lastName email")
+        .populate("clientId", "clientId firstName lastName email")
         .populate("recordedBy", "name email role")
         .sort({ paymentDate: -1 })
         .skip((page - 1) * limit)
@@ -220,7 +215,7 @@ export async function POST(request: NextRequest) {
     /* ── Persist repayment record ── */
     const repayment = new LoanRepayment({
       loanId: loan._id,
-      memberId: loan.memberId,
+      clientId: loan.clientId,
       amount,
       principalPortion,
       interestPortion,

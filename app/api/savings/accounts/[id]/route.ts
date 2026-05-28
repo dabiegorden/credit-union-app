@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
-import Member from "@/models/Member";
 import { authMiddleware } from "@/middleware/Authmiddleware";
 import { z } from "zod";
 import Savingstransaction from "@/models/Savingstransaction";
 import Savingsaccount from "@/models/Savingsaccount";
+import Client from "@/models/Client";
 
 const updateAccountSchema = z.object({
   accountName: z.string().trim().min(1).optional(),
@@ -26,8 +26,8 @@ export async function GET(
 
     const account = await Savingsaccount.findById(id)
       .populate(
-        "memberId",
-        "memberId firstName lastName email phone status savingsBalance",
+        "clientId",
+        "clientId firstName lastName email phone status savingsBalance",
       )
       .populate("openedBy", "name email role")
       .lean();
@@ -36,13 +36,12 @@ export async function GET(
       return NextResponse.json({ error: "Account not found" }, { status: 404 });
     }
 
-    // Members can only view their own accounts
-    if (auth.user?.role === "member") {
-      const member = await Member.findOne({ userId: auth.user.userId });
-      const accMemberId = (
-        account.memberId as { _id: unknown }
+    // Clients can only view their own accounts
+    if (auth.user?.role === "client") {
+      const accClientId = (
+        account.clientId as { _id: unknown }
       )._id?.toString();
-      if (!member || member._id.toString() !== accMemberId) {
+      if (auth.user.userId !== accClientId) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
     }
@@ -124,7 +123,7 @@ export async function PUT(
     if (description !== undefined) account.description = description;
 
     await account.save();
-    await account.populate("memberId", "memberId firstName lastName email");
+    await account.populate("clientId", "clientId firstName lastName email");
     await account.populate("openedBy", "name email role");
 
     return NextResponse.json({

@@ -3,7 +3,7 @@ import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import { verifyToken } from "@/lib/jwt";
 
-// GET /api/admin/users?role=member|staff|all&page=1&limit=20&search=
+// GET /api/admin/users?role=client|staff|all&page=1&limit=20&search=
 export async function GET(request: NextRequest) {
   try {
     const token = request.cookies.get("token")?.value;
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/admin/users — create a member or staff account
+// POST /api/admin/users — create a client or staff account
 export async function POST(request: NextRequest) {
   try {
     const token = request.cookies.get("token")?.value;
@@ -85,9 +85,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!["staff", "member"].includes(role)) {
+    if (!["staff", "client"].includes(role)) {
       return NextResponse.json(
-        { error: "Role must be 'staff' or 'member'" },
+        { error: "Role must be 'staff' or 'client'" },
         { status: 400 },
       );
     }
