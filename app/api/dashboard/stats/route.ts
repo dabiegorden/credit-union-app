@@ -5,7 +5,7 @@
  * Admin and Staff only.
  *
  * Returns:
- *  - members:      total, active, inactive, suspended, newThisMonth
+ *  - clients:      total, active, inactive, suspended, newThisMonth
  *  - savings:      totalAccounts, active, dormant, closed, totalBalance, depositsToday, withdrawalsToday
  *  - loans:        total, pending, underReview, approved, active, overdue, paid, rejected, totalDisbursed, totalOutstanding, totalPenalties
  *  - repayments:   collectedThisMonth, countThisMonth
@@ -13,12 +13,12 @@
  *  - sparklines:   last-30-day daily deposit/withdrawal volumes (for mini charts)
  *  - recentLoans:  last 5 loan applications (for activity feed)
  *  - recentTx:     last 5 transactions (for activity feed)
- *  - alerts:       overdue loans, dormant accounts, low-activity members
+ *  - alerts:       overdue loans, dormant accounts, low-activity clients
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
-import Member from "@/models/Member";
+import Client from "@/models/Client";
 import SavingsAccount from "@/models/Savingsaccount";
 import SavingsTransaction from "@/models/Savingstransaction";
 import Loan from "@/models/Loan";
@@ -68,13 +68,13 @@ export async function GET(request: NextRequest) {
        Run all aggregations concurrently
     ══════════════════════════════════════════════════ */
     const [
-      // Members
-      totalMembers,
-      activeMembers,
-      inactiveMembers,
-      suspendedMembers,
-      newMembersThisMonth,
-      newMembersPrevMonth,
+      // Clients
+      totalClients,
+      activeClients,
+      inactiveClients,
+      suspendedClients,
+      newClientsThisMonth,
+      newClientsPrevMonth,
 
       // Savings accounts
       totalAccounts,
@@ -117,15 +117,15 @@ export async function GET(request: NextRequest) {
       // Dormant accounts (no tx in 90 days) — for alert count
       dormantAlertCount,
     ] = await Promise.all([
-      /* ── Members ── */
-      Member.countDocuments({}),
-      Member.countDocuments({ status: "active" }),
-      Member.countDocuments({ status: "inactive" }),
-      Member.countDocuments({ status: "suspended" }),
-      Member.countDocuments({
+      /* ── Clients ── */
+      Client.countDocuments({}),
+      Client.countDocuments({ status: "active" }),
+      Client.countDocuments({ status: "inactive" }),
+      Client.countDocuments({ status: "suspended" }),
+      Client.countDocuments({
         dateJoined: { $gte: monthStart, $lte: monthEnd },
       }),
-      Member.countDocuments({
+      Client.countDocuments({
         dateJoined: { $gte: prevMonthStart, $lte: prevMonthEnd },
       }),
 
@@ -209,14 +209,14 @@ export async function GET(request: NextRequest) {
 
       /* ── Overdue loans for alert feed ── */
       Loan.find({ status: "overdue" })
-        .populate("memberId", "memberId firstName lastName")
+        .populate("clientId", "clientId firstName lastName")
         .sort({ nextPaymentDate: 1 })
         .limit(5)
         .lean(),
 
       /* ── Recent loan applications ── */
       Loan.find({})
-        .populate("memberId", "memberId firstName lastName")
+        .populate("clientId", "clientId firstName lastName")
         .populate("appliedBy", "name role")
         .sort({ applicationDate: -1 })
         .limit(6)
@@ -224,7 +224,7 @@ export async function GET(request: NextRequest) {
 
       /* ── Recent transactions ── */
       SavingsTransaction.find({})
-        .populate("memberId", "memberId firstName lastName")
+        .populate("clientId", "clientId firstName lastName")
         .populate("accountId", "accountNumber accountType accountName")
         .populate("recordedBy", "name role")
         .sort({ date: -1 })
@@ -419,16 +419,16 @@ export async function GET(request: NextRequest) {
       pendingApplicationsCount:
         (loanCounts.pending ?? 0) + (loanCounts.under_review ?? 0),
       overdueLoans: overdueLoans.map((l) => {
-        const m = l.memberId as unknown as {
-          memberId: string;
+        const m = l.clientId as unknown as {
+          clientId: string;
           firstName: string;
           lastName: string;
         } | null;
         return {
           _id: l._id,
           loanId: l.loanId,
-          memberName: m ? `${m.firstName} ${m.lastName}` : "Unknown",
-          memberId: m?.memberId ?? "",
+          clientName: m ? `${m.firstName} ${m.lastName}` : "Unknown",
+          clientId: m?.clientId ?? "",
           outstandingBalance: l.outstandingBalance,
           penaltyAmount: l.penaltyAmount,
           nextPaymentDate: l.nextPaymentDate,
@@ -439,8 +439,8 @@ export async function GET(request: NextRequest) {
 
     /* Recent loans shape */
     const recentLoansClean = recentLoans.map((l) => {
-      const m = l.memberId as unknown as {
-        memberId: string;
+      const m = l.clientId as unknown as {
+        clientId: string;
         firstName: string;
         lastName: string;
       } | null;
@@ -452,16 +452,16 @@ export async function GET(request: NextRequest) {
         loanAmount: l.loanAmount,
         purpose: l.purpose,
         applicationDate: l.applicationDate,
-        memberName: m ? `${m.firstName} ${m.lastName}` : "Unknown",
-        memberId: m?.memberId ?? "",
+        clientName: m ? `${m.firstName} ${m.lastName}` : "Unknown",
+        clientId: m?.clientId ?? "",
         appliedByName: u?.name ?? "",
       };
     });
 
     /* Recent transactions shape */
     const recentTxClean = recentTx.map((t) => {
-      const m = t.memberId as unknown as {
-        memberId: string;
+      const m = t.clientId as unknown as {
+        clientId: string;
         firstName: string;
         lastName: string;
       } | null;
@@ -476,8 +476,8 @@ export async function GET(request: NextRequest) {
         amount: t.amount,
         balanceAfter: t.balanceAfter,
         date: t.date,
-        memberName: m ? `${m.firstName} ${m.lastName}` : "Unknown",
-        memberId: m?.memberId ?? "",
+        clientName: m ? `${m.firstName} ${m.lastName}` : "Unknown",
+        clientId: m?.clientId ?? "",
         accountNumber: a?.accountNumber ?? "",
         accountType: a?.accountType ?? "",
         accountName: a?.accountName ?? "",
@@ -489,14 +489,14 @@ export async function GET(request: NextRequest) {
       success: true,
       generatedAt: now.toISOString(),
 
-      members: {
-        total: totalMembers,
-        active: activeMembers,
-        inactive: inactiveMembers,
-        suspended: suspendedMembers,
-        newThisMonth: newMembersThisMonth,
-        newPrevMonth: newMembersPrevMonth,
-        pctChange: pctChange(newMembersThisMonth, newMembersPrevMonth),
+      clients: {
+        total: totalClients,
+        active: activeClients,
+        inactive: inactiveClients,
+        suspended: suspendedClients,
+        newThisMonth: newClientsThisMonth,
+        newPrevMonth: newClientsPrevMonth,
+        pctChange: pctChange(newClientsThisMonth, newClientsPrevMonth),
       },
 
       savings: {

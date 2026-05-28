@@ -1,48 +1,23 @@
 /**
  * FIXED: src/app/api/savings/accounts/route.ts
  *
- * KEY FIX: Uses email-fallback member resolution for the member GET path.
+ * KEY FIX: Uses email-fallback client resolution for the client GET path.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { authMiddleware } from "@/middleware/Authmiddleware";
 import { z } from "zod";
-import Member from "@/models/Member";
-import User from "@/models/User";
 import Savingsaccount from "@/models/Savingsaccount";
 import mongoose from "mongoose";
+import Client from "@/models/Client";
 
 const createAccountSchema = z.object({
-  memberId: z.string().min(1, "Member ID is required"),
+  clientId: z.string().min(1, "Client ID is required"),
   accountType: z.enum(["regular", "fixed", "susu"]).default("regular"),
   accountName: z.string().trim().optional(),
   description: z.string().trim().optional(),
 });
-
-/** Resolve Member by userId OR email fallback */
-async function resolveMember(userId: string) {
-  let member = null;
-  if (mongoose.isValidObjectId(userId)) {
-    member = await Member.findOne({
-      userId: new mongoose.Types.ObjectId(userId),
-    });
-  }
-  if (!member) {
-    const user = await User.findById(userId).select("email").lean();
-    const email = (user as { email?: string } | null)?.email;
-    if (email) {
-      member = await Member.findOne({ email });
-      if (member && !member.userId) {
-        await Member.findByIdAndUpdate(member._id, {
-          userId: new mongoose.Types.ObjectId(userId),
-        });
-        member.userId = new mongoose.Types.ObjectId(userId) as any;
-      }
-    }
-  }
-  return member;
-}
 
 // ─── GET /api/savings/accounts ────────────────────────────────────────────────
 export async function GET(request: NextRequest) {
@@ -59,20 +34,13 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status") || "";
     const type = searchParams.get("type") || "";
 
-    // Members can only see their own accounts
-    if (auth.user?.role === "member") {
-      const member = await resolveMember(auth.user.userId);
-      if (!member) {
-        return NextResponse.json(
-          { error: "Member profile not found" },
-          { status: 404 },
-        );
-      }
-
-      const accounts = await Savingsaccount.find({ memberId: member._id })
+    // Clients can only see their own accounts
+    // Replace the GET client block:
+    if (auth.user?.role === "client") {
+      // JWT userId IS the Client._id — no lookup needed
+      const accounts = await Savingsaccount.find({ clientId: auth.user.userId })
         .sort({ createdAt: -1 })
         .lean();
-
       return NextResponse.json({ success: true, accounts });
     }
 
@@ -82,27 +50,27 @@ export async function GET(request: NextRequest) {
     if (type) query.accountType = type;
 
     if (search) {
-      const matchingMembers = await Member.find({
+      const matchingClients = await Client.find({
         $or: [
           { firstName: { $regex: search, $options: "i" } },
           { lastName: { $regex: search, $options: "i" } },
-          { memberId: { $regex: search, $options: "i" } },
+          { clientId: { $regex: search, $options: "i" } },
           { email: { $regex: search, $options: "i" } },
         ],
       }).select("_id");
 
-      const memberIds = matchingMembers.map((m) => m._id);
+      const clientIds = matchingClients.map((m) => m._id);
 
       query.$or = [
         { accountNumber: { $regex: search, $options: "i" } },
-        { memberId: { $in: memberIds } },
+        { clientId: { $in: clientIds } },
       ];
     }
 
     const [total, accounts] = await Promise.all([
       Savingsaccount.countDocuments(query),
       Savingsaccount.find(query)
-        .populate("memberId", "memberId firstName lastName email phone status")
+        .populate("clientId", "clientId firstName lastName email phone status")
         .populate("openedBy", "name email role")
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
@@ -125,7 +93,7 @@ export async function GET(request: NextRequest) {
 }
 
 // ─── POST /api/savings/accounts ───────────────────────────────────────────────
-// Admin / Staff only — open a new savings account for a member
+// Admin / Staff only — open a new savings account for a client
 export async function POST(request: NextRequest) {
   try {
     const auth = await authMiddleware(request, ["admin", "staff"]);
@@ -146,28 +114,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { memberId, accountType, accountName, description } = parsed.data;
+    const { clientId, accountType, accountName, description } = parsed.data;
 
-    const member = await Member.findById(memberId);
-    if (!member) {
-      return NextResponse.json({ error: "Member not found" }, { status: 404 });
+    const client = await Client.findById(clientId);
+    if (!client) {
+      return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
-    if (member.status !== "active") {
+    if (client.status !== "active") {
       return NextResponse.json(
-        { error: "Cannot open account for an inactive or suspended member" },
+        { error: "Cannot open account for an inactive or suspended client" },
         { status: 400 },
       );
     }
 
     const duplicate = await Savingsaccount.findOne({
-      memberId,
+      clientId: clientId,
       accountType,
       status: { $ne: "closed" },
     });
     if (duplicate) {
       return NextResponse.json(
         {
-          error: `Member already has an active ${accountType} savings account`,
+          error: `Client already has an active ${accountType} savings account`,
         },
         { status: 409 },
       );
@@ -181,14 +149,14 @@ export async function POST(request: NextRequest) {
           : "Susu Savings";
 
     const account = await Savingsaccount.create({
-      memberId,
+      clientId: clientId,
       accountType,
       accountName: accountName || defaultName,
       openedBy: auth.user?.userId,
       description,
     });
 
-    await account.populate("memberId", "memberId firstName lastName email");
+    await account.populate("clientId", "clientId firstName lastName email");
     await account.populate("openedBy", "name email role");
 
     return NextResponse.json(

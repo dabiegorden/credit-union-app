@@ -10,7 +10,7 @@
  *   groupBy   — "day" | "week" | "month" (default: "month")
  *   status    — filter by loan status
  *   purpose   — filter by loan purpose
- *   memberId  — filter by specific member
+ *   clientId  — filter by specific client
  *   export    — "1" → flat rows for Excel
  */
 
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
       | "month";
     const statusFilt = searchParams.get("status") || "";
     const purposeFilt = searchParams.get("purpose") || "";
-    const memberIdStr = searchParams.get("memberId") || "";
+    const clientIdStr = searchParams.get("clientId") || "";
     const isExport = searchParams.get("export") === "1";
 
     /* ── Base match for loan applications ── */
@@ -52,15 +52,15 @@ export async function GET(request: NextRequest) {
     };
     if (statusFilt) loanMatch.status = statusFilt;
     if (purposeFilt) loanMatch.purpose = purposeFilt;
-    if (memberIdStr) {
+    if (clientIdStr) {
       const mongoose = (await import("mongoose")).default;
-      loanMatch.memberId = new mongoose.Types.ObjectId(memberIdStr);
+      loanMatch.clientId = new mongoose.Types.ObjectId(clientIdStr);
     }
 
     /* ── Export mode ── */
     if (isExport) {
       const loans = await Loan.find(loanMatch)
-        .populate("memberId", "memberId firstName lastName email phone")
+        .populate("clientId", "clientId firstName lastName email phone")
         .populate("appliedBy", "name role")
         .populate("approvedBy", "name role")
         .sort({ applicationDate: -1 })
@@ -68,8 +68,8 @@ export async function GET(request: NextRequest) {
         .lean();
 
       const flat = loans.map((l) => {
-        const m = l.memberId as unknown as {
-          memberId: string;
+        const m = l.clientId as unknown as {
+          clientId: string;
           firstName: string;
           lastName: string;
           email: string;
@@ -88,10 +88,10 @@ export async function GET(request: NextRequest) {
           "Application Date": l.applicationDate
             ? new Date(l.applicationDate).toISOString().split("T")[0]
             : "",
-          "Member ID": m?.memberId ?? "",
-          "Member Name": m ? `${m.firstName} ${m.lastName}` : "",
-          "Member Email": m?.email ?? "",
-          "Member Phone": m?.phone ?? "",
+          "Client ID": m?.clientId ?? "",
+          "Client Name": m ? `${m.firstName} ${m.lastName}` : "",
+          "Client Email": m?.email ?? "",
+          "Client Phone": m?.phone ?? "",
           Status: l.status,
           Purpose: l.purpose,
           "Loan Amount": l.loanAmount,

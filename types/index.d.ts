@@ -1,10 +1,10 @@
-export type Role = "admin" | "staff" | "member";
+export type Role = "admin" | "staff" | "client";
 
 export type LoanStatus = "pending" | "approved" | "rejected" | "paid";
 
 export type TransactionType = "deposit" | "withdrawal";
 
-export type MemberStatus = "active" | "inactive" | "suspended";
+export type ClientStatus = "active" | "inactive" | "suspended";
 
 export interface JWTPayload {
   userId: string;

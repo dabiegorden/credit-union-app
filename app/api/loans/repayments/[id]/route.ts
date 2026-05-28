@@ -41,7 +41,7 @@ export async function GET(
         "loanId",
         "loanId loanAmount totalPayable outstandingBalance status interestRate loanDurationMonths",
       )
-      .populate("memberId", "memberId firstName lastName email phone")
+      .populate("clientId", "clientId firstName lastName email phone")
       .populate("recordedBy", "name email role")
       .lean();
 

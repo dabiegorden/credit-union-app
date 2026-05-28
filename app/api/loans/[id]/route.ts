@@ -8,9 +8,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Loan from "@/models/Loan";
 import LoanRepayment from "@/models/LoanRepayment";
-import Member from "@/models/Member";
 import { authMiddleware } from "@/middleware/Authmiddleware";
 import { z } from "zod";
+import Client from "@/models/Client";
+import { calcRepaymentSchedule } from "@/lib/loanEligibility";
 
 /* ── Action schemas ── */
 const reviewSchema = z.object({
@@ -44,12 +45,19 @@ const cancelSchema = z.object({
   notes: z.string().trim().optional(),
 });
 
-const updateSchema = z.union([
+const adjustRateSchema = z.object({
+  action: z.literal("adjust_rate"),
+  newRate: z.number().min(0).max(100),
+  notes: z.string().trim().optional(),
+});
+
+const updateSchema = z.discriminatedUnion("action", [
   reviewSchema,
   approveSchema,
   rejectSchema,
   disburseSchema,
   cancelSchema,
+  adjustRateSchema,
 ]);
 
 // ─── GET /api/loans/[id] ─────────────────────────────────────────────────────
@@ -66,8 +74,8 @@ export async function GET(
 
     const loan = await Loan.findById(id)
       .populate(
-        "memberId",
-        "memberId firstName lastName email phone savingsBalance status dateJoined",
+        "clientId",
+        "clientId firstName lastName email phone savingsBalance status dateJoined",
       )
       .populate("appliedBy", "name email role")
       .populate("reviewedBy", "name email role")
@@ -78,10 +86,9 @@ export async function GET(
       return NextResponse.json({ error: "Loan not found" }, { status: 404 });
     }
 
-    /* Member can only view their own loans */
-    if (auth.user?.role === "member") {
-      const member = await Member.findOne({ userId: auth.user.userId });
-      if (!member || String(loan.memberId._id) !== String(member._id)) {
+    /* Client can only view their own loans */
+    if (auth.user?.role === "client") {
+      if (String((loan.clientId as any)._id) !== auth.user.userId) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
     }
@@ -182,10 +189,9 @@ export async function PUT(
       );
     }
     if (action === "cancel") {
-      /* Members can cancel their own pending apps; admin/staff can cancel anything */
-      if (auth.user?.role === "member") {
-        const member = await Member.findOne({ userId: auth.user.userId });
-        if (!member || String(loan.memberId) !== String(member._id)) {
+      /* Clients can cancel their own pending apps; admin/staff can cancel anything */
+      if (auth.user?.role === "client") {
+        if (String(loan.clientId) !== auth.user.userId) {
           return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
       }
@@ -299,6 +305,49 @@ export async function PUT(
         break;
       }
 
+      // Inside the PUT switch statement, add this case alongside the existing ones:
+
+      case "adjust_rate": {
+        // Staff or admin can adjust the rate on pending/under_review loans
+        if (!["admin", "staff"].includes(auth.user?.role!)) {
+          return NextResponse.json(
+            { error: "Only staff or admin can adjust interest rates" },
+            { status: 403 },
+          );
+        }
+        if (!["pending", "under_review", "approved"].includes(loan.status)) {
+          return NextResponse.json(
+            { error: `Cannot adjust rate — loan is ${loan.status}` },
+            { status: 409 },
+          );
+        }
+
+        const { newRate, notes: rateNotes } = parsed.data as {
+          newRate: number;
+          notes?: string;
+        };
+        if (typeof newRate !== "number" || newRate < 0 || newRate > 100) {
+          return NextResponse.json(
+            { error: "Invalid interest rate" },
+            { status: 400 },
+          );
+        }
+
+        const schedule = calcRepaymentSchedule(
+          loan.loanAmount,
+          newRate,
+          loan.loanDurationMonths,
+        );
+        loan.finalInterestRate = newRate;
+        loan.monthlyRepayment = schedule.monthlyRepayment;
+        loan.totalPayable = schedule.totalPayable;
+        loan.totalInterest = schedule.totalInterest;
+        loan.outstandingBalance = schedule.totalPayable;
+        loan.interestRateSetBy = auth.user!.userId as any;
+        if (rateNotes) loan.notes = rateNotes;
+        break;
+      }
+
       /* ── CANCEL: pending|under_review → cancelled ── */
       case "cancel": {
         if (!["pending", "under_review", "approved"].includes(loan.status)) {
@@ -316,7 +365,7 @@ export async function PUT(
     await loan.save();
 
     await loan.populate([
-      { path: "memberId", select: "memberId firstName lastName email" },
+      { path: "clientId", select: "clientId firstName lastName email" },
       { path: "appliedBy", select: "name email role" },
       { path: "reviewedBy", select: "name email role" },
       { path: "approvedBy", select: "name email role" },
@@ -327,6 +376,7 @@ export async function PUT(
       approve: "Loan approved successfully",
       reject: "Loan rejected",
       disburse: "Loan disbursed — now active",
+      adjust_rate: "Interest rate adjusted",
       cancel: "Loan application cancelled",
     };
 

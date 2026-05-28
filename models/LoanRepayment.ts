@@ -9,7 +9,7 @@ export type RepaymentMethod =
 export interface ILoanRepayment extends Document {
   repaymentId: string; // auto e.g. RPY-00001
   loanId: mongoose.Types.ObjectId; // ref: Loan
-  memberId: mongoose.Types.ObjectId; // denormalized — ref: Member
+  clientId: mongoose.Types.ObjectId; // denormalized — ref: Client
   amount: number; // total amount paid this repayment
   principalPortion: number; // how much went to principal
   interestPortion: number; // how much went to interest
@@ -36,10 +36,10 @@ const LoanRepaymentSchema = new Schema<ILoanRepayment>(
       ref: "Loan",
       required: [true, "Loan ID is required"],
     },
-    memberId: {
+    clientId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Member",
-      required: [true, "Member ID is required"],
+      ref: "Client",
+      required: [true, "Client ID is required"],
     },
     amount: {
       type: Number,
@@ -80,7 +80,7 @@ LoanRepaymentSchema.pre("save", async function () {
 });
 
 LoanRepaymentSchema.index({ loanId: 1, paymentDate: -1 });
-LoanRepaymentSchema.index({ memberId: 1, paymentDate: -1 });
+LoanRepaymentSchema.index({ clientId: 1, paymentDate: -1 });
 
 export default mongoose.models.LoanRepayment ||
   mongoose.model<ILoanRepayment>("LoanRepayment", LoanRepaymentSchema);

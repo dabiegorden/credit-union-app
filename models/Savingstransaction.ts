@@ -4,11 +4,11 @@ export type TransactionType = "deposit" | "withdrawal";
 
 export interface ISavingsTransaction extends Document {
   accountId: mongoose.Types.ObjectId; // SavingsAccount ref
-  memberId: mongoose.Types.ObjectId; // Member ref (denormalized for fast queries)
+  clientId: mongoose.Types.ObjectId; // Client ref (denormalized for fast queries)
   transactionType: TransactionType;
   amount: number;
   balanceAfter: number;
-  recordedBy: mongoose.Types.ObjectId; // User (admin | staff | member self-deposit)
+  recordedBy: mongoose.Types.ObjectId; // User (admin | staff | client self-deposit)
   description?: string;
   date: Date;
   createdAt: Date;
@@ -22,10 +22,10 @@ const SavingsTransactionSchema = new Schema<ISavingsTransaction>(
       ref: "SavingsAccount",
       required: [true, "Account ID is required"],
     },
-    memberId: {
+    clientId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Member",
-      required: [true, "Member ID is required"],
+      ref: "Client",
+      required: [true, "Client ID is required"],
     },
     transactionType: {
       type: String,
@@ -59,9 +59,9 @@ const SavingsTransactionSchema = new Schema<ISavingsTransaction>(
   { timestamps: true },
 );
 
-// Index for fast per-member and per-account queries
+// Index for fast per-client and per-account queries
 SavingsTransactionSchema.index({ accountId: 1, date: -1 });
-SavingsTransactionSchema.index({ memberId: 1, date: -1 });
+SavingsTransactionSchema.index({ clientId: 1, date: -1 });
 
 export default mongoose.models.SavingsTransaction ||
   mongoose.model<ISavingsTransaction>(

@@ -1,8 +1,8 @@
 /**
  * FIXED: src/app/api/savings/transactions/route.ts
  *
- * KEY FIX: Uses email-fallback member resolution so members whose
- * Member document lacks a userId field can still deposit/withdraw.
+ * KEY FIX: Uses email-fallback client resolution so clients whose
+ * Client document lacks a userId field can still deposit/withdraw.
  *
  * This is a drop-in replacement for the existing file.
  */
@@ -11,8 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import SavingsAccount from "@/models/Savingsaccount";
 import SavingsTransaction from "@/models/Savingstransaction";
-import Member from "@/models/Member";
-import User from "@/models/User";
+import Client from "@/models/Client";
 import { authMiddleware } from "@/middleware/Authmiddleware";
 import { z } from "zod";
 import mongoose from "mongoose";
@@ -24,30 +23,6 @@ const transactionSchema = z.object({
   description: z.string().trim().optional(),
   date: z.string().optional(),
 });
-
-/** Resolve Member by userId OR email fallback — shared pattern */
-async function resolveMember(userId: string) {
-  let member = null;
-  if (mongoose.isValidObjectId(userId)) {
-    member = await Member.findOne({
-      userId: new mongoose.Types.ObjectId(userId),
-    });
-  }
-  if (!member) {
-    const user = await User.findById(userId).select("email").lean();
-    const email = (user as { email?: string } | null)?.email;
-    if (email) {
-      member = await Member.findOne({ email });
-      if (member && !member.userId) {
-        await Member.findByIdAndUpdate(member._id, {
-          userId: new mongoose.Types.ObjectId(userId),
-        });
-        member.userId = new mongoose.Types.ObjectId(userId) as any;
-      }
-    }
-  }
-  return member;
-}
 
 // ─── GET /api/savings/transactions ───────────────────────────────────────────
 export async function GET(request: NextRequest) {
@@ -62,26 +37,15 @@ export async function GET(request: NextRequest) {
     const limit = Math.max(1, parseInt(searchParams.get("limit") || "20"));
     const accountId = searchParams.get("accountId") || "";
     const type = searchParams.get("type") || "";
-    const memberId = searchParams.get("memberId") || "";
+    const clientId = searchParams.get("clientId") || "";
     const from = searchParams.get("from") || "";
     const to = searchParams.get("to") || "";
 
     const query: Record<string, unknown> = {};
-
-    if (auth.user?.role === "member") {
-      const member = await resolveMember(auth.user.userId);
-      if (!member) {
-        // Return empty rather than 404 — graceful degradation
-        return NextResponse.json({
-          success: true,
-          transactions: [],
-          pagination: { total: 0, page: 1, limit, pages: 0 },
-        });
-      }
-      query.memberId = member._id;
-    } else {
-      if (memberId) query.memberId = memberId;
-      if (accountId) query.accountId = accountId;
+    if (auth.user?.role === "client") {
+      query.clientId = auth.user.userId; // JWT userId IS Client._id
+    } else if (clientId) {
+      query.clientId = clientId;
     }
 
     if (type) query.transactionType = type;
@@ -96,7 +60,7 @@ export async function GET(request: NextRequest) {
       SavingsTransaction.countDocuments(query),
       SavingsTransaction.find(query)
         .populate("accountId", "accountNumber accountType accountName")
-        .populate("memberId", "memberId firstName lastName email")
+        .populate("clientId", "clientId firstName lastName email")
         .populate("recordedBy", "name email role")
         .sort({ date: -1 })
         .skip((page - 1) * limit)
@@ -156,23 +120,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // For members: verify ownership using the resolver
+    // For clients: verify ownership using the resolver
     let recordedById = auth.user!.userId;
-    if (auth.user?.role === "member") {
-      const member = await resolveMember(auth.user.userId);
-      if (!member) {
+    if (auth.user?.role === "client") {
+      const clientDoc = await Client.findById(auth.user.userId);
+      if (!clientDoc) {
         return NextResponse.json(
-          { error: "Member profile not found" },
+          { error: "Client profile not found" },
           { status: 404 },
         );
       }
-      if (member._id.toString() !== account.memberId.toString()) {
+      if (clientDoc._id.toString() !== account.clientId.toString()) {
         return NextResponse.json(
           { error: "Forbidden — you can only transact on your own accounts" },
           { status: 403 },
         );
       }
-      if (member.status !== "active") {
+      if (clientDoc.status !== "active") {
         return NextResponse.json(
           { error: "Your account is not active. Contact staff." },
           { status: 400 },
@@ -199,8 +163,8 @@ export async function POST(request: NextRequest) {
     account.balance = balanceAfter;
     await account.save();
 
-    // Sync Member.savingsBalance
-    await Member.findByIdAndUpdate(account.memberId, {
+    // Sync Client.savingsBalance
+    await Client.findByIdAndUpdate(account.clientId, {
       $inc: {
         savingsBalance: transactionType === "deposit" ? amount : -amount,
       },
@@ -209,7 +173,7 @@ export async function POST(request: NextRequest) {
     // Create transaction record
     const transaction = await SavingsTransaction.create({
       accountId,
-      memberId: account.memberId,
+      clientId: account.clientId,
       transactionType,
       amount,
       balanceAfter,
@@ -222,7 +186,7 @@ export async function POST(request: NextRequest) {
       "accountId",
       "accountNumber accountType accountName",
     );
-    await transaction.populate("memberId", "memberId firstName lastName email");
+    await transaction.populate("clientId", "clientId firstName lastName email");
     await transaction.populate("recordedBy", "name email role");
 
     return NextResponse.json(
