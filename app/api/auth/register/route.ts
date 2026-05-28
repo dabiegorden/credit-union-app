@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
       name,
       email,
       password,
-      role: role || "client", // default to client if not specified
+      role: role || "client",
     });
 
     // Generate JWT
