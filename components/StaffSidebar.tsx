@@ -53,11 +53,11 @@ export const staffMenuItems = [
     icon: BarChart3,
   },
   {
-    title: "Members",
+    title: "Clients",
     items: [
       {
-        title: "Members Management",
-        url: "/staff-dashboard/members",
+        title: "Clients Management",
+        url: "/staff-dashboard/clients",
         icon: Users2,
       },
     ],
