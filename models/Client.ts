@@ -66,9 +66,21 @@ const ClientSchema = new Schema<IClient>(
 
 ClientSchema.pre("save", async function () {
   if (!this.clientId) {
-    const count = await mongoose.model("Client").countDocuments();
-    this.clientId = `CLT-${String(count + 1).padStart(5, "0")}`;
+    const last = await mongoose
+      .model<IClient>("Client")
+      .findOne({}, { clientId: 1 })
+      .sort({ clientId: -1 })
+      .lean<Pick<IClient, "clientId"> | null>();
+
+    let nextNumber = 1;
+    if (last?.clientId) {
+      const match = last.clientId.match(/^CLT-(\d+)$/);
+      if (match) nextNumber = parseInt(match[1], 10) + 1;
+    }
+
+    this.clientId = `CLT-${String(nextNumber).padStart(5, "0")}`;
   }
+
   if (this.isModified("password")) {
     this.password = await bcrypt.hash(this.password, 10);
   }
