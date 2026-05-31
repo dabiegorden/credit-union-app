@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
     if (transactionType === "withdrawal" && amount > account.balance) {
       return NextResponse.json(
         {
-          error: `Insufficient balance. Current balance: GH₵${account.balance.toFixed(2)}`,
+          error: `Insufficient balance. Current balance: GHS${account.balance.toFixed(2)}`,
         },
         { status: 400 },
       );

@@ -123,13 +123,15 @@ export async function PUT(
 }
 
 // ─── DELETE /api/savings/transactions/[id] ───────────────────────────────────
-// Admin only — reverses the transaction and restores account + client balance
+// Admin / Staff — reverses the transaction and restores account + client balance
+// NOTE: Changed from ["admin"] only to ["admin", "staff"] so staff can also
+//       reverse wrong transactions as required.
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const auth = await authMiddleware(request, ["admin"]);
+    const auth = await authMiddleware(request, ["admin", "staff"]);
     if (!auth.isValid) return auth.response!;
 
     const { id } = await params;

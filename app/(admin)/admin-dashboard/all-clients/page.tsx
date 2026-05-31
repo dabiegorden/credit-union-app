@@ -20,29 +20,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 import {
   Users,
   UserPlus,
   Search,
   RefreshCw,
-  MoreHorizontal,
   Pencil,
   Trash2,
   Eye,
   EyeOff,
-  X,
   AlertTriangle,
   Loader2,
   Shield,
-  UserCheck,
   ChevronLeft,
   ChevronRight,
   Lock,
@@ -68,7 +58,7 @@ interface Pagination {
   pages: number;
 }
 
-type RoleFilter = "all" | "client" | "staff";
+type RoleFilter = "all" | "staff";
 
 function getInitials(name: string) {
   const parts = name?.trim().split(" ") ?? [];
@@ -96,7 +86,45 @@ const ROLE_STYLE: Record<string, { bg: string; text: string; border: string }> =
     },
   };
 
-// ─── UserFormModal ─────────────────────────────────────────────────────────────
+// ─── Reusable icon action button ─────────────────────────────────────────────
+function ActionBtn({
+  icon: Icon,
+  label,
+  color,
+  onClick,
+}: {
+  icon: React.ElementType;
+  label: string;
+  color: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={label}
+      aria-label={label}
+      className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-150"
+      style={{
+        background: `${color}18`,
+        border: `1px solid ${color}35`,
+      }}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLElement).style.background = `${color}30`;
+        (e.currentTarget as HTMLElement).style.borderColor = `${color}65`;
+        (e.currentTarget as HTMLElement).style.transform = "scale(1.1)";
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLElement).style.background = `${color}18`;
+        (e.currentTarget as HTMLElement).style.borderColor = `${color}35`;
+        (e.currentTarget as HTMLElement).style.transform = "scale(1)";
+      }}
+    >
+      <Icon className="w-3.5 h-3.5" style={{ color }} />
+    </button>
+  );
+}
+
+// ─── UserFormModal ────────────────────────────────────────────────────────────
 interface FormModalProps {
   open: boolean;
   onClose: () => void;
@@ -109,7 +137,6 @@ function UserFormModal({ open, onClose, onSuccess, editUser }: FormModalProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"staff">("staff");
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -118,7 +145,6 @@ function UserFormModal({ open, onClose, onSuccess, editUser }: FormModalProps) {
     if (open) {
       setName(editUser?.name ?? "");
       setEmail(editUser?.email ?? "");
-      setRole("staff");
       setPassword("");
       setErrors({});
       setShowPw(false);
@@ -140,7 +166,7 @@ function UserFormModal({ open, onClose, onSuccess, editUser }: FormModalProps) {
     if (!validate()) return;
     setLoading(true);
     try {
-      const payload: Record<string, string> = { name, email, role };
+      const payload: Record<string, string> = { name, email, role: "staff" };
       if (password) payload.password = password;
 
       const res = await fetch(
@@ -277,7 +303,6 @@ function UserFormModal({ open, onClose, onSuccess, editUser }: FormModalProps) {
               <Label className="text-white/60 text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
                 <Shield className="w-3 h-3 text-[#C8963E]" /> Role
               </Label>
-              {/* Staff accounts only — clients are created via /api/clients */}
               <div
                 className="h-11 rounded-xl bg-[#0B1D3A] border border-[#C8963E]/20 flex items-center px-4"
                 style={{ color: "#60a5fa" }}
@@ -314,7 +339,7 @@ function UserFormModal({ open, onClose, onSuccess, editUser }: FormModalProps) {
   );
 }
 
-// ─── DeleteModal ────────────────────────────────────────────────────────────────
+// ─── DeleteModal ──────────────────────────────────────────────────────────────
 function DeleteModal({
   open,
   user,
@@ -397,7 +422,6 @@ export default function StaffAccountsPage() {
   const [spinning, setSpinning] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editUser, setEditUser] = useState<UserRecord | null>(null);
-  const [viewUser, setViewUser] = useState<UserRecord | null>(null);
   const [deleteUser, setDeleteUser] = useState<UserRecord | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const searchTimer = useRef<ReturnType<typeof setTimeout>>(null);
@@ -412,7 +436,6 @@ export default function StaffAccountsPage() {
           role,
           ...(q ? { search: q } : {}),
         });
-        // ✅ Updated to /api/admin/users
         const res = await fetch(`/api/users?${params}`, {
           credentials: "include",
         });
@@ -459,7 +482,6 @@ export default function StaffAccountsPage() {
     if (!deleteUser) return;
     setDeleteLoading(true);
     try {
-      // ✅ Updated to /api/admin/users/[id]
       const res = await fetch(`/api/users/${deleteUser._id}`, {
         method: "DELETE",
         credentials: "include",
@@ -487,6 +509,7 @@ export default function StaffAccountsPage() {
       className="min-h-screen p-6 space-y-6"
       style={{ background: "#0B1D3A" }}
     >
+      {/* ── Page header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#C8963E]/12 border border-[#C8963E]/25 rounded-full text-[10px] font-bold tracking-widest uppercase text-[#E4B86A] mb-2">
@@ -515,7 +538,7 @@ export default function StaffAccountsPage() {
         </Button>
       </div>
 
-      {/* Stat Cards */}
+      {/* ── Stat Cards ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {[
           {
@@ -553,7 +576,7 @@ export default function StaffAccountsPage() {
         ))}
       </div>
 
-      {/* Table Card */}
+      {/* ── Table Card ── */}
       <div
         className="rounded-2xl border overflow-hidden"
         style={{
@@ -561,6 +584,7 @@ export default function StaffAccountsPage() {
           borderColor: "rgba(200,150,62,0.12)",
         }}
       >
+        {/* Toolbar */}
         <div
           className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 border-b"
           style={{ borderColor: "rgba(200,150,62,0.1)" }}
@@ -596,7 +620,7 @@ export default function StaffAccountsPage() {
           <div className="flex items-center gap-2">
             <div className="relative">
               <Search
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
                 style={{ color: "rgba(200,150,62,0.5)" }}
               />
               <Input
@@ -622,14 +646,15 @@ export default function StaffAccountsPage() {
           </div>
         </div>
 
+        {/* Table */}
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr style={{ borderBottom: "1px solid rgba(200,150,62,0.08)" }}>
-                {["User", "Email", "Role", "Joined", ""].map((h) => (
+                {["User", "Email", "Role", "Joined", "Actions"].map((h) => (
                   <th
                     key={h}
-                    className="text-left px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.15em]"
+                    className={`text-left px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.15em] ${h === "Actions" ? "text-right" : ""}`}
                     style={{ color: "rgba(228,184,106,0.4)" }}
                   >
                     {h}
@@ -667,7 +692,7 @@ export default function StaffAccountsPage() {
                   return (
                     <tr
                       key={user._id}
-                      className="group transition-colors"
+                      className="transition-colors"
                       style={{
                         borderBottom: "1px solid rgba(200,150,62,0.06)",
                         background:
@@ -686,10 +711,11 @@ export default function StaffAccountsPage() {
                             : "transparent")
                       }
                     >
+                      {/* User */}
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
                           <Avatar
-                            className="h-9 w-9"
+                            className="h-9 w-9 shrink-0"
                             style={{ border: "2px solid rgba(200,150,62,0.3)" }}
                           >
                             <AvatarFallback
@@ -708,11 +734,15 @@ export default function StaffAccountsPage() {
                           </span>
                         </div>
                       </td>
+
+                      {/* Email */}
                       <td className="px-5 py-3.5">
                         <span className="text-white/45 text-sm">
                           {user.email}
                         </span>
                       </td>
+
+                      {/* Role */}
                       <td className="px-5 py-3.5">
                         <span
                           className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider"
@@ -725,53 +755,33 @@ export default function StaffAccountsPage() {
                           {user.role}
                         </span>
                       </td>
+
+                      {/* Joined */}
                       <td className="px-5 py-3.5">
                         <span className="text-white/35 text-sm">
                           {format(new Date(user.createdAt), "MMM d, yyyy")}
                         </span>
                       </td>
-                      <td className="px-5 py-3.5 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 rounded-lg opacity-0 group-hover:opacity-100"
-                            >
-                              <MoreHorizontal className="w-4 h-4 text-white/50" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent
-                            align="end"
-                            className="w-44 border"
-                            style={{
-                              background: "#122549",
-                              borderColor: "rgba(200,150,62,0.2)",
-                              borderRadius: "12px",
-                              color: "white",
+
+                      {/* ── Actions — always visible ── */}
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-2 justify-end">
+                          <ActionBtn
+                            icon={Pencil}
+                            label="Edit"
+                            color="#C8963E"
+                            onClick={() => {
+                              setEditUser(user);
+                              setFormOpen(true);
                             }}
-                          >
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setEditUser(user);
-                                setFormOpen(true);
-                              }}
-                              className="cursor-pointer focus:bg-white/5 text-white/65 focus:text-white"
-                            >
-                              <Pencil className="mr-2 h-4 w-4 text-[#C8963E]" />{" "}
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator
-                              style={{ background: "rgba(200,150,62,0.1)" }}
-                            />
-                            <DropdownMenuItem
-                              onClick={() => setDeleteUser(user)}
-                              className="cursor-pointer focus:bg-red-500/10 text-red-400 focus:text-red-300"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" /> Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                          />
+                          <ActionBtn
+                            icon={Trash2}
+                            label="Delete"
+                            color="#f87171"
+                            onClick={() => setDeleteUser(user)}
+                          />
+                        </div>
                       </td>
                     </tr>
                   );
@@ -781,6 +791,7 @@ export default function StaffAccountsPage() {
           </table>
         </div>
 
+        {/* Pagination */}
         {pagination.pages > 1 && (
           <div
             className="flex items-center justify-between px-5 py-4 border-t"

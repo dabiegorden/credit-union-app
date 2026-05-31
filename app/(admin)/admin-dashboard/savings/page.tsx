@@ -26,6 +26,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
+  Printer,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -81,7 +82,7 @@ interface Pagination {
   pages: number;
 }
 
-type ModalMode = "open" | "edit" | "view" | "delete" | null;
+type ModalMode = "open" | "edit" | "view" | "delete" | "statement" | null;
 
 /* ─── Helpers ─────────────────────────────────────────────────────────────── */
 const ACCOUNT_TYPE_META = {
@@ -130,13 +131,15 @@ const STATUS_META = {
 };
 
 function fmt(n: number) {
-  return `GH₵${n.toLocaleString("en-GH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `GHS${n.toLocaleString("en-GH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 }
 
 function initials(m?: PopulatedClient) {
   const first = m?.firstName?.charAt(0) || "";
   const last = m?.lastName?.charAt(0) || "";
-
   return `${first}${last}`.toUpperCase();
 }
 
@@ -158,7 +161,10 @@ function Modal({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(7,17,34,0.82)", backdropFilter: "blur(10px)" }}
+      style={{
+        background: "rgba(7,17,34,0.82)",
+        backdropFilter: "blur(10px)",
+      }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <motion.div
@@ -173,19 +179,22 @@ function Modal({
           border: "1px solid rgba(200,150,62,0.22)",
           boxShadow:
             "0 28px 70px rgba(7,17,34,0.85), 0 0 0 1px rgba(200,150,62,0.06)",
+          maxHeight: "90vh",
+          overflowY: "auto",
         }}
       >
-        {/* gold top bar */}
         <div
-          className="h-0.75"
+          className="h-1"
           style={{
             background: "linear-gradient(90deg,#C8963E,#E4B86A,#C8963E)",
           }}
         />
-        {/* header */}
         <div
-          className="flex items-center justify-between px-6 py-5"
-          style={{ borderBottom: "1px solid rgba(200,150,62,0.1)" }}
+          className="flex items-center justify-between px-6 py-5 sticky top-0 z-10"
+          style={{
+            borderBottom: "1px solid rgba(200,150,62,0.1)",
+            background: "#0e1f3d",
+          }}
         >
           <div className="flex items-center gap-2.5">
             <div
@@ -203,14 +212,6 @@ function Modal({
               background: "rgba(255,255,255,0.05)",
               color: "rgba(255,255,255,0.4)",
             }}
-            onMouseEnter={(e) =>
-              ((e.currentTarget as HTMLElement).style.background =
-                "rgba(255,255,255,0.1)")
-            }
-            onMouseLeave={(e) =>
-              ((e.currentTarget as HTMLElement).style.background =
-                "rgba(255,255,255,0.05)")
-            }
           >
             <X className="w-4 h-4" />
           </button>
@@ -268,6 +269,77 @@ const inputBlur = (
   e.currentTarget.style.boxShadow = "none";
 };
 
+/* ─── Pagination button ─────────────────────────────────────────────────────── */
+function PgBtn({
+  children,
+  onClick,
+  disabled,
+  active,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+  active?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold transition-all disabled:opacity-25"
+      style={
+        active
+          ? {
+              background: "linear-gradient(135deg,#C8963E,#E4B86A)",
+              color: "#0B1D3A",
+            }
+          : {
+              background: "rgba(255,255,255,0.05)",
+              color: "rgba(255,255,255,0.45)",
+            }
+      }
+    >
+      {children}
+    </button>
+  );
+}
+
+/* ─── Action Button — always visible ─────────────────────────────────────── */
+function ActionBtn({
+  icon: Icon,
+  title,
+  color,
+  onClick,
+}: {
+  icon: React.ElementType;
+  title: string;
+  color: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-150"
+      style={{
+        background: `${color}15`,
+        border: `1px solid ${color}35`,
+      }}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLElement).style.background = `${color}28`;
+        (e.currentTarget as HTMLElement).style.borderColor = `${color}60`;
+        (e.currentTarget as HTMLElement).style.transform = "scale(1.08)";
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLElement).style.background = `${color}15`;
+        (e.currentTarget as HTMLElement).style.borderColor = `${color}35`;
+        (e.currentTarget as HTMLElement).style.transform = "scale(1)";
+      }}
+    >
+      <Icon className="w-3.5 h-3.5" style={{ color }} />
+    </button>
+  );
+}
+
 /* ─── Main Page ───────────────────────────────────────────────────────────── */
 export default function AdminSavingsAccountPage() {
   const [accounts, setAccounts] = useState<SavingsAccount[]>([]);
@@ -291,6 +363,18 @@ export default function AdminSavingsAccountPage() {
   const [txList, setTxList] = useState<Transaction[]>([]);
   const [txLoading, setTxLoading] = useState(false);
   const [delLoading, setDelLoading] = useState(false);
+
+  // Statement modal
+  const [stmtFrom, setStmtFrom] = useState(
+    () =>
+      new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split("T")[0],
+  );
+  const [stmtTo, setStmtTo] = useState(
+    () => new Date().toISOString().split("T")[0],
+  );
+  const [stmtLoading, setStmtLoading] = useState(false);
 
   // Open account form
   const [allClients, setAllClients] = useState<PopulatedClient[]>([]);
@@ -348,7 +432,6 @@ export default function AdminSavingsAccountPage() {
     fetchAccounts(1, "", "all", "all");
   }, []); // eslint-disable-line
 
-  // Debounced search/filter
   useEffect(() => {
     if (searchTimer.current) clearTimeout(searchTimer.current);
     searchTimer.current = setTimeout(
@@ -360,7 +443,7 @@ export default function AdminSavingsAccountPage() {
     };
   }, [search, statusFilter, typeFilter, fetchAccounts]);
 
-  /* ── Fetch all active clients for the open-account selector ── */
+  /* ── Fetch all active clients ── */
   const fetchAllClients = useCallback(async () => {
     setClientsLoading(true);
     try {
@@ -411,6 +494,18 @@ export default function AdminSavingsAccountPage() {
     setEditStatus(acc.status);
     setEditDesc(acc.description ?? "");
     setMode("edit");
+  };
+
+  /* ── Open statement modal for a specific account's client ── */
+  const openStatement = (acc: SavingsAccount) => {
+    setSelected(acc);
+    setStmtFrom(
+      new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split("T")[0],
+    );
+    setStmtTo(new Date().toISOString().split("T")[0]);
+    setMode("statement");
   };
 
   /* ── Reset open form ── */
@@ -511,6 +606,44 @@ export default function AdminSavingsAccountPage() {
       toast.error("Network error");
     } finally {
       setDelLoading(false);
+    }
+  };
+
+  /* ── Download statement PDF for selected account's client ── */
+  const handleDownloadStatement = async () => {
+    if (!selected) return;
+    setStmtLoading(true);
+    try {
+      const clientMongoId = selected.clientId._id;
+      const params = new URLSearchParams({
+        from: stmtFrom,
+        to: stmtTo,
+        accountId: selected._id,
+      });
+      const res = await fetch(
+        `/api/clients/${clientMongoId}/statement?${params}`,
+        { credentials: "include" },
+      );
+      if (!res.ok) {
+        const err = await res.json();
+        toast.error(err.error || "Failed to generate statement");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `statement-${selected.clientId.clientId}-${stmtFrom}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success("Statement downloaded successfully");
+      setMode(null);
+    } catch {
+      toast.error("Network error while generating statement");
+    } finally {
+      setStmtLoading(false);
     }
   };
 
@@ -630,7 +763,6 @@ export default function AdminSavingsAccountPage() {
 
       {/* ── Toolbar ── */}
       <div className="flex flex-col sm:flex-row gap-3">
-        {/* Search */}
         <div className="relative flex-1">
           <Search
             className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4"
@@ -647,7 +779,6 @@ export default function AdminSavingsAccountPage() {
           />
         </div>
 
-        {/* Status filter */}
         <div className="relative shrink-0">
           <Filter
             className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none"
@@ -672,7 +803,6 @@ export default function AdminSavingsAccountPage() {
           />
         </div>
 
-        {/* Type filter */}
         <div className="relative shrink-0">
           <Filter
             className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none"
@@ -697,7 +827,6 @@ export default function AdminSavingsAccountPage() {
           />
         </div>
 
-        {/* Refresh */}
         <button
           onClick={() => {
             setSpinning(true);
@@ -723,9 +852,9 @@ export default function AdminSavingsAccountPage() {
       >
         {/* Table head */}
         <div
-          className="grid gap-4 px-5 py-3 text-[10px] font-black uppercase tracking-[0.14em]"
+          className="grid gap-3 px-5 py-3 text-[10px] font-black uppercase tracking-[0.14em]"
           style={{
-            gridTemplateColumns: "1.4fr 1.2fr 90px 100px 110px 100px auto",
+            gridTemplateColumns: "1.4fr 1.2fr 90px 100px 110px 90px 145px",
             background: "rgba(200,150,62,0.06)",
             borderBottom: "1px solid rgba(200,150,62,0.1)",
             color: "rgba(228,184,106,0.5)",
@@ -789,10 +918,10 @@ export default function AdminSavingsAccountPage() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: i * 0.025 }}
-                  className="grid gap-4 px-5 py-4 items-center group transition-colors duration-100"
+                  className="grid gap-3 px-5 py-4 items-center transition-colors duration-100"
                   style={{
                     gridTemplateColumns:
-                      "1.4fr 1.2fr 90px 100px 110px 100px auto",
+                      "1.4fr 1.2fr 90px 100px 110px 90px 145px",
                     cursor: "default",
                   }}
                   onMouseEnter={(e) =>
@@ -881,56 +1010,35 @@ export default function AdminSavingsAccountPage() {
                     {format(new Date(acc.createdAt), "MMM d, yyyy")}
                   </p>
 
-                  {/* Actions */}
-                  <div className="flex items-center gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                    {[
-                      {
-                        Icon: Eye,
-                        title: "View",
-                        color: "#C8963E",
-                        action: () => openView(acc),
-                      },
-                      {
-                        Icon: Pencil,
-                        title: "Edit",
-                        color: "#E4B86A",
-                        action: () => openEdit(acc),
-                      },
-                      {
-                        Icon: Trash2,
-                        title: "Delete",
-                        color: "#f87171",
-                        action: () => {
-                          setSelected(acc);
-                          setMode("delete");
-                        },
-                      },
-                    ].map(({ Icon, title, color, action }) => (
-                      <button
-                        key={title}
-                        onClick={action}
-                        title={title}
-                        className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-150"
-                        style={{
-                          background: "rgba(255,255,255,0.04)",
-                          border: "1px solid rgba(255,255,255,0.06)",
-                        }}
-                        onMouseEnter={(e) => {
-                          (e.currentTarget as HTMLElement).style.background =
-                            `${color}18`;
-                          (e.currentTarget as HTMLElement).style.borderColor =
-                            `${color}40`;
-                        }}
-                        onMouseLeave={(e) => {
-                          (e.currentTarget as HTMLElement).style.background =
-                            "rgba(255,255,255,0.04)";
-                          (e.currentTarget as HTMLElement).style.borderColor =
-                            "rgba(255,255,255,0.06)";
-                        }}
-                      >
-                        <Icon className="w-3.5 h-3.5" style={{ color }} />
-                      </button>
-                    ))}
+                  {/* Actions — always visible */}
+                  <div className="flex items-center gap-1 justify-end flex-wrap">
+                    <ActionBtn
+                      icon={Eye}
+                      title="View"
+                      color="#C8963E"
+                      onClick={() => openView(acc)}
+                    />
+                    <ActionBtn
+                      icon={Printer}
+                      title="Print Statement"
+                      color="#60a5fa"
+                      onClick={() => openStatement(acc)}
+                    />
+                    <ActionBtn
+                      icon={Pencil}
+                      title="Edit"
+                      color="#E4B86A"
+                      onClick={() => openEdit(acc)}
+                    />
+                    <ActionBtn
+                      icon={Trash2}
+                      title="Delete"
+                      color="#f87171"
+                      onClick={() => {
+                        setSelected(acc);
+                        setMode("delete");
+                      }}
+                    />
                   </div>
                 </motion.div>
               );
@@ -1011,6 +1119,136 @@ export default function AdminSavingsAccountPage() {
 
       {/* ═══════════════════════════════════════ MODALS ════════════════════════ */}
       <AnimatePresence>
+        {/* ── STATEMENT MODAL ── */}
+        {mode === "statement" && selected && (
+          <Modal title="Print Account Statement" onClose={() => setMode(null)}>
+            <div className="space-y-5">
+              {/* Client info */}
+              <div
+                className="flex items-center gap-3 p-3.5 rounded-xl"
+                style={{
+                  background: "rgba(200,150,62,0.08)",
+                  border: "1px solid rgba(200,150,62,0.2)",
+                }}
+              >
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shrink-0"
+                  style={{
+                    background: "linear-gradient(135deg,#C8963E,#E4B86A)",
+                    color: "#0B1D3A",
+                  }}
+                >
+                  {initials(selected.clientId)}
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-white">
+                    {selected.clientId?.firstName} {selected.clientId?.lastName}
+                  </p>
+                  <p
+                    className="text-[11px]"
+                    style={{ color: "rgba(255,255,255,0.4)" }}
+                  >
+                    {selected.clientId?.clientId} · {selected.accountName} ·{" "}
+                    {selected.accountNumber}
+                  </p>
+                </div>
+              </div>
+
+              <div
+                className="flex items-center gap-2.5 p-3 rounded-xl"
+                style={{
+                  background: "rgba(96,165,250,0.08)",
+                  border: "1px solid rgba(96,165,250,0.2)",
+                }}
+              >
+                <Printer
+                  className="w-4 h-4 shrink-0"
+                  style={{ color: "#60a5fa" }}
+                />
+                <p
+                  className="text-xs"
+                  style={{ color: "rgba(255,255,255,0.55)" }}
+                >
+                  The statement will include all transactions for this account
+                  within the selected date range.
+                </p>
+              </div>
+
+              {/* Date range */}
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="From Date" required>
+                  <div className="relative">
+                    <Calendar
+                      className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
+                      style={{ color: "rgba(200,150,62,0.5)" }}
+                    />
+                    <input
+                      type="date"
+                      value={stmtFrom}
+                      onChange={(e) => setStmtFrom(e.target.value)}
+                      className={inputCls + " pl-9"}
+                      style={{ ...inputStyle, colorScheme: "dark" }}
+                      onFocus={inputFocus}
+                      onBlur={inputBlur}
+                    />
+                  </div>
+                </Field>
+                <Field label="To Date" required>
+                  <div className="relative">
+                    <Calendar
+                      className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
+                      style={{ color: "rgba(200,150,62,0.5)" }}
+                    />
+                    <input
+                      type="date"
+                      value={stmtTo}
+                      onChange={(e) => setStmtTo(e.target.value)}
+                      className={inputCls + " pl-9"}
+                      style={{ ...inputStyle, colorScheme: "dark" }}
+                      onFocus={inputFocus}
+                      onBlur={inputBlur}
+                    />
+                  </div>
+                </Field>
+              </div>
+
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setMode(null)}
+                  className="flex-1 py-3 rounded-xl text-sm font-semibold"
+                  style={{
+                    background: "rgba(255,255,255,0.06)",
+                    color: "rgba(255,255,255,0.6)",
+                    border: "1px solid rgba(255,255,255,0.10)",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDownloadStatement}
+                  disabled={stmtLoading}
+                  className="flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all hover:-translate-y-0.5 disabled:opacity-50"
+                  style={{
+                    background: "linear-gradient(135deg,#C8963E,#E4B86A)",
+                    color: "#0B1D3A",
+                    boxShadow: "0 6px 20px rgba(200,150,62,0.35)",
+                  }}
+                >
+                  {stmtLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Printer className="w-4 h-4" /> Download PDF
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </Modal>
+        )}
+
         {/* ── OPEN ACCOUNT MODAL ── */}
         {mode === "open" && (
           <Modal
@@ -1019,9 +1257,7 @@ export default function AdminSavingsAccountPage() {
             wide
           >
             <form onSubmit={handleOpenAccount} className="space-y-5">
-              {/* Member selector — fetched list */}
               <Field label="Select Client" required>
-                {/* Selected client pill */}
                 {chosenClient ? (
                   <div
                     className="flex items-center gap-3 p-3 rounded-xl"
@@ -1053,16 +1289,8 @@ export default function AdminSavingsAccountPage() {
                     <button
                       type="button"
                       onClick={() => setChosenClient(null)}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors shrink-0"
+                      className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
                       style={{ background: "rgba(255,255,255,0.07)" }}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.background =
-                          "rgba(239,68,68,0.18)")
-                      }
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.background =
-                          "rgba(255,255,255,0.07)")
-                      }
                     >
                       <X className="w-3.5 h-3.5 text-white/50" />
                     </button>
@@ -1075,7 +1303,6 @@ export default function AdminSavingsAccountPage() {
                       background: "rgba(11,29,58,0.70)",
                     }}
                   >
-                    {/* Filter bar inside the list */}
                     <div
                       className="relative"
                       style={{
@@ -1093,8 +1320,6 @@ export default function AdminSavingsAccountPage() {
                         className="w-full bg-transparent pl-9 pr-4 py-2.5 text-sm text-white placeholder-white/20 outline-none"
                       />
                     </div>
-
-                    {/* Scrollable list */}
                     <div className="overflow-y-auto" style={{ maxHeight: 220 }}>
                       {clientsLoading ? (
                         <div
@@ -1214,7 +1439,6 @@ export default function AdminSavingsAccountPage() {
                     />
                   </div>
                 </Field>
-
                 <Field label="Account Name">
                   <input
                     placeholder="e.g. My Savings"
@@ -1245,7 +1469,7 @@ export default function AdminSavingsAccountPage() {
                 <button
                   type="button"
                   onClick={() => setMode(null)}
-                  className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all"
+                  className="flex-1 py-3 rounded-xl text-sm font-semibold"
                   style={{
                     background: "rgba(255,255,255,0.06)",
                     color: "rgba(255,255,255,0.6)",
@@ -1281,7 +1505,6 @@ export default function AdminSavingsAccountPage() {
         {mode === "edit" && selected && (
           <Modal title="Edit Account" onClose={() => setMode(null)}>
             <form onSubmit={handleEditAccount} className="space-y-4">
-              {/* Read-only info row */}
               <div
                 className="flex items-center gap-3 p-3.5 rounded-xl"
                 style={{
@@ -1376,7 +1599,7 @@ export default function AdminSavingsAccountPage() {
                 <button
                   type="button"
                   onClick={() => setMode(null)}
-                  className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all"
+                  className="flex-1 py-3 rounded-xl text-sm font-semibold"
                   style={{
                     background: "rgba(255,255,255,0.06)",
                     color: "rgba(255,255,255,0.6)",
@@ -1410,7 +1633,6 @@ export default function AdminSavingsAccountPage() {
         {mode === "view" && selected && (
           <Modal title="Account Details" onClose={() => setMode(null)} wide>
             <div className="space-y-5">
-              {/* Hero strip */}
               <div
                 className="rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                 style={{
@@ -1456,7 +1678,6 @@ export default function AdminSavingsAccountPage() {
                 </div>
               </div>
 
-              {/* Detail grid */}
               <div className="grid grid-cols-2 gap-3">
                 {[
                   {
@@ -1628,6 +1849,17 @@ export default function AdminSavingsAccountPage() {
 
               <div className="flex gap-3 pt-1">
                 <button
+                  onClick={() => openStatement(selected)}
+                  className="flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all hover:-translate-y-0.5"
+                  style={{
+                    background: "rgba(96,165,250,0.12)",
+                    border: "1px solid rgba(96,165,250,0.3)",
+                    color: "#60a5fa",
+                  }}
+                >
+                  <Printer className="w-4 h-4" /> Print Statement
+                </button>
+                <button
                   onClick={() => {
                     setMode(null);
                     openEdit(selected);
@@ -1721,7 +1953,10 @@ export default function AdminSavingsAccountPage() {
                   onClick={handleDelete}
                   disabled={delLoading || selected.balance > 0}
                   className="flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-45"
-                  style={{ background: "rgba(239,68,68,0.85)", color: "white" }}
+                  style={{
+                    background: "rgba(239,68,68,0.85)",
+                    color: "white",
+                  }}
                 >
                   {delLoading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -1738,39 +1973,5 @@ export default function AdminSavingsAccountPage() {
         )}
       </AnimatePresence>
     </div>
-  );
-}
-
-/* ─── Pagination button ─────────────────────────────────────────────────────── */
-function PgBtn({
-  children,
-  onClick,
-  disabled,
-  active,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-  disabled?: boolean;
-  active?: boolean;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold transition-all disabled:opacity-25"
-      style={
-        active
-          ? {
-              background: "linear-gradient(135deg,#C8963E,#E4B86A)",
-              color: "#0B1D3A",
-            }
-          : {
-              background: "rgba(255,255,255,0.05)",
-              color: "rgba(255,255,255,0.45)",
-            }
-      }
-    >
-      {children}
-    </button>
   );
 }

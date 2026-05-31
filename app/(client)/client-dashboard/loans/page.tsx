@@ -160,7 +160,7 @@ const STATUS_META: Record<
 };
 
 function fmt(n: number) {
-  return `GH₵${n?.toLocaleString("en-GH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `GHS${n?.toLocaleString("en-GH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 const STATUS_TABS: StatusFilter[] = [

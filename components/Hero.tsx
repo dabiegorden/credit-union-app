@@ -4,12 +4,12 @@ import Link from "next/link";
 
 const STATS = [
   { value: "500+", label: "Members Managed" },
-  { value: "GH₵2M+", label: "Transactions Processed" },
+  { value: "GHS2M+", label: "Transactions Processed" },
   { value: "99.9%", label: "Uptime Reliability" },
 ];
 
 const PREVIEW_CARDS = [
-  { label: "Total Savings", value: "GH₵847K", change: "↑ 12.4%" },
+  { label: "Total Savings", value: "GHS847K", change: "↑ 12.4%" },
   { label: "Active Loans", value: "143", change: "↑ 5.2%" },
   { label: "Members", value: "512", change: "↑ 8.1%" },
 ];
@@ -19,7 +19,7 @@ const PREVIEW_ROWS = [
     initials: "AK",
     name: "Ama Kusi",
     action: "Loan Application",
-    amount: "GH₵5,000",
+    amount: "GHS5,000",
     status: "Approved",
     color: "bg-emerald-500/15 text-emerald-400",
   },
@@ -27,7 +27,7 @@ const PREVIEW_ROWS = [
     initials: "KO",
     name: "Kofi Owusu",
     action: "Savings Deposit",
-    amount: "GH₵800",
+    amount: "GHS800",
     status: "Pending",
     color: "bg-yellow-500/15 text-yellow-300",
   },

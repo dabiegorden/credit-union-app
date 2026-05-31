@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
     if (amount > totalOwed + 0.01) {
       return NextResponse.json(
         {
-          error: `Payment of GH₵${amount.toFixed(2)} exceeds total owed of GH₵${totalOwed.toFixed(2)} (outstanding: GH₵${loan.outstandingBalance.toFixed(2)} + penalty: GH₵${loan.penaltyAmount.toFixed(2)})`,
+          error: `Payment of GHS${amount.toFixed(2)} exceeds total owed of GHS${totalOwed.toFixed(2)} (outstanding: GHS${loan.outstandingBalance.toFixed(2)} + penalty: GHS${loan.penaltyAmount.toFixed(2)})`,
         },
         { status: 400 },
       );
@@ -238,7 +238,7 @@ export async function POST(request: NextRequest) {
         message:
           loan.status === "paid"
             ? "Loan fully repaid! 🎉"
-            : `Repayment recorded. Outstanding: GH₵${loan.outstandingBalance.toFixed(2)}`,
+            : `Repayment recorded. Outstanding: GHS${loan.outstandingBalance.toFixed(2)}`,
         repayment,
         loan: {
           _id: loan._id,
