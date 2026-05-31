@@ -19,14 +19,13 @@ import {
   AlertTriangle,
   Wallet,
   TrendingUp,
-  TrendingDown,
   Hash,
   Calendar,
   User,
   DollarSign,
   FileText,
   CheckCircle2,
-  Clock,
+  Printer,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -80,7 +79,7 @@ interface Pagination {
   pages: number;
 }
 
-type ModalMode = "record" | "view" | "edit" | "delete" | null;
+type ModalMode = "record" | "view" | "edit" | "delete" | "statement" | null;
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 const ACCT_TYPE_META = {
@@ -122,11 +121,14 @@ const TX_TYPE_META = {
 };
 
 function fmt(n: number) {
-  return `GHS${n.toLocaleString("en-GH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `GHS${n.toLocaleString("en-GH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 }
 
 function initials(m: PopulatedClient) {
-  return (m?.firstName[0] + m?.lastName[0])?.toUpperCase();
+  return ((m?.firstName?.[0] ?? "") + (m?.lastName?.[0] ?? "")).toUpperCase();
 }
 
 /* ─── Modal Shell ────────────────────────────────────────────────────────── */
@@ -147,7 +149,10 @@ function Modal({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(7,17,34,0.82)", backdropFilter: "blur(10px)" }}
+      style={{
+        background: "rgba(7,17,34,0.82)",
+        backdropFilter: "blur(10px)",
+      }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <motion.div
@@ -162,17 +167,22 @@ function Modal({
           border: "1px solid rgba(200,150,62,0.22)",
           boxShadow:
             "0 28px 70px rgba(7,17,34,0.85), 0 0 0 1px rgba(200,150,62,0.06)",
+          maxHeight: "90vh",
+          overflowY: "auto",
         }}
       >
         <div
-          className="h-0.75"
+          className="h-1"
           style={{
             background: "linear-gradient(90deg,#C8963E,#E4B86A,#C8963E)",
           }}
         />
         <div
-          className="flex items-center justify-between px-6 py-5"
-          style={{ borderBottom: "1px solid rgba(200,150,62,0.1)" }}
+          className="flex items-center justify-between px-6 py-5 sticky top-0 z-10"
+          style={{
+            borderBottom: "1px solid rgba(200,150,62,0.1)",
+            background: "#0e1f3d",
+          }}
         >
           <div className="flex items-center gap-2.5">
             <div
@@ -190,14 +200,6 @@ function Modal({
               background: "rgba(255,255,255,0.05)",
               color: "rgba(255,255,255,0.4)",
             }}
-            onMouseEnter={(e) =>
-              ((e.currentTarget as HTMLElement).style.background =
-                "rgba(255,255,255,0.1)")
-            }
-            onMouseLeave={(e) =>
-              ((e.currentTarget as HTMLElement).style.background =
-                "rgba(255,255,255,0.05)")
-            }
           >
             <X className="w-4 h-4" />
           </button>
@@ -289,6 +291,43 @@ function PgBtn({
   );
 }
 
+/* ─── Action Button ──────────────────────────────────────────────────────── */
+function ActionBtn({
+  icon: Icon,
+  title,
+  color,
+  onClick,
+}: {
+  icon: React.ElementType;
+  title: string;
+  color: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-150"
+      style={{
+        background: `${color}15`,
+        border: `1px solid ${color}35`,
+      }}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLElement).style.background = `${color}28`;
+        (e.currentTarget as HTMLElement).style.borderColor = `${color}60`;
+        (e.currentTarget as HTMLElement).style.transform = "scale(1.08)";
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLElement).style.background = `${color}15`;
+        (e.currentTarget as HTMLElement).style.borderColor = `${color}35`;
+        (e.currentTarget as HTMLElement).style.transform = "scale(1)";
+      }}
+    >
+      <Icon className="w-3.5 h-3.5" style={{ color }} />
+    </button>
+  );
+}
+
 /* ─── Main Page ──────────────────────────────────────────────────────────── */
 export default function AdminDepositsPage() {
   const [transactions, setTransactions] = useState<SavingsTransaction[]>([]);
@@ -313,6 +352,26 @@ export default function AdminDepositsPage() {
   const [mode, setMode] = useState<ModalMode>(null);
   const [selected, setSelected] = useState<SavingsTransaction | null>(null);
   const [delLoading, setDelLoading] = useState(false);
+
+  /* statement modal state */
+  const [stmtClientId, setStmtClientId] = useState("");
+  const [stmtFrom, setStmtFrom] = useState(
+    () =>
+      new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split("T")[0],
+  );
+  const [stmtTo, setStmtTo] = useState(
+    () => new Date().toISOString().split("T")[0],
+  );
+  const [stmtLoading, setStmtLoading] = useState(false);
+  const [allMembersForStmt, setAllMembersForStmt] = useState<PopulatedClient[]>(
+    [],
+  );
+  const [stmtMemberFilter, setStmtMemberFilter] = useState("");
+  const [stmtMembersLoading, setStmtMembersLoading] = useState(false);
+  const [chosenStmtMember, setChosenStmtMember] =
+    useState<PopulatedClient | null>(null);
 
   /* record-deposit form */
   const [allMembers, setAllMembers] = useState<PopulatedClient[]>([]);
@@ -358,7 +417,6 @@ export default function AdminDepositsPage() {
         if (from) p.set("from", from);
         if (to) p.set("to", to);
 
-        /* client-side member filter — we search by name/id after fetch */
         const res = await fetch(`/api/savings/transactions?${p}`, {
           credentials: "include",
         });
@@ -382,7 +440,6 @@ export default function AdminDepositsPage() {
     fetchTransactions(1, "", "all", "", "");
   }, []); // eslint-disable-line
 
-  /* debounced re-fetch on filter changes */
   useEffect(() => {
     if (searchTimer.current) clearTimeout(searchTimer.current);
     searchTimer.current = setTimeout(
@@ -410,6 +467,22 @@ export default function AdminDepositsPage() {
     }
   }, []);
 
+  /* ── Fetch clients for statement modal ── */
+  const fetchMembersForStmt = useCallback(async () => {
+    setStmtMembersLoading(true);
+    try {
+      const res = await fetch("/api/clients?limit=200&status=active", {
+        credentials: "include",
+      });
+      const data = await res.json();
+      setAllMembersForStmt(data.clients ?? []);
+    } catch {
+      toast.error("Could not load clients.");
+    } finally {
+      setStmtMembersLoading(false);
+    }
+  }, []);
+
   /* ── Fetch accounts for a chosen member ── */
   const fetchMemberAccounts = useCallback(async (clientId: string) => {
     setAcctLoading(true);
@@ -429,7 +502,7 @@ export default function AdminDepositsPage() {
     }
   }, []);
 
-  /* ── Derived stats from current page ── */
+  /* ── Derived stats ── */
   const totalDeposits = transactions
     .filter((t) => t.transactionType === "deposit")
     .reduce((s, t) => s + t.amount, 0);
@@ -525,7 +598,7 @@ export default function AdminDepositsPage() {
     }
   };
 
-  /* ── Delete / reverse ── */
+  /* ── Delete / reverse transaction ── */
   const handleDelete = async () => {
     if (!selected) return;
     setDelLoading(true);
@@ -550,7 +623,45 @@ export default function AdminDepositsPage() {
     }
   };
 
-  /* ── Client-side search filter (name, member ID, account number) ── */
+  /* ── Print / Download statement ── */
+  const handlePrintStatement = async () => {
+    if (!chosenStmtMember) {
+      toast.error("Please select a client first");
+      return;
+    }
+    setStmtLoading(true);
+    try {
+      const params = new URLSearchParams({ from: stmtFrom, to: stmtTo });
+      const res = await fetch(
+        `/api/clients/${chosenStmtMember._id}/statement?${params}`,
+        { credentials: "include" },
+      );
+      if (!res.ok) {
+        const err = await res.json();
+        toast.error(err.error || "Failed to generate statement");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `statement-${chosenStmtMember.clientId}-${stmtFrom}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success(
+        `Statement downloaded for ${chosenStmtMember.firstName} ${chosenStmtMember.lastName}`,
+      );
+      setMode(null);
+    } catch {
+      toast.error("Network error while generating statement");
+    } finally {
+      setStmtLoading(false);
+    }
+  };
+
+  /* ── Client-side search filter ── */
   const displayed = search.trim()
     ? transactions.filter((t) => {
         const q = search.toLowerCase();
@@ -595,22 +706,50 @@ export default function AdminDepositsPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => {
-            resetForm();
-            fetchAllMembers();
-            setMode("record");
-          }}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm shrink-0 transition-all duration-200 hover:-translate-y-0.5"
-          style={{
-            background: "linear-gradient(135deg,#C8963E,#E4B86A)",
-            color: "#0B1D3A",
-            boxShadow: "0 6px 24px rgba(200,150,62,0.4)",
-          }}
-        >
-          <Plus className="w-4 h-4" />
-          Record Transaction
-        </button>
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          {/* Print Statement */}
+          <button
+            onClick={() => {
+              setChosenStmtMember(null);
+              setStmtMemberFilter("");
+              setStmtFrom(
+                new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+                  .toISOString()
+                  .split("T")[0],
+              );
+              setStmtTo(new Date().toISOString().split("T")[0]);
+              fetchMembersForStmt();
+              setMode("statement");
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 hover:-translate-y-0.5"
+            style={{
+              background: "rgba(200,150,62,0.12)",
+              border: "1px solid rgba(200,150,62,0.35)",
+              color: "#E4B86A",
+            }}
+          >
+            <Printer className="w-4 h-4" />
+            Print Statement
+          </button>
+
+          {/* Record Transaction */}
+          <button
+            onClick={() => {
+              resetForm();
+              fetchAllMembers();
+              setMode("record");
+            }}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 hover:-translate-y-0.5"
+            style={{
+              background: "linear-gradient(135deg,#C8963E,#E4B86A)",
+              color: "#0B1D3A",
+              boxShadow: "0 6px 24px rgba(200,150,62,0.4)",
+            }}
+          >
+            <Plus className="w-4 h-4" />
+            Record Transaction
+          </button>
+        </div>
       </div>
 
       {/* ── Stat cards ── */}
@@ -677,7 +816,6 @@ export default function AdminDepositsPage() {
 
       {/* ── Toolbar ── */}
       <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
-        {/* Search */}
         <div className="relative flex-1 min-w-48">
           <Search
             className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
@@ -694,7 +832,6 @@ export default function AdminDepositsPage() {
           />
         </div>
 
-        {/* Type filter */}
         <div className="relative shrink-0">
           <Filter
             className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none"
@@ -720,7 +857,6 @@ export default function AdminDepositsPage() {
           />
         </div>
 
-        {/* Date range */}
         <input
           type="date"
           value={fromDate}
@@ -740,7 +876,6 @@ export default function AdminDepositsPage() {
           onBlur={inputBlur}
         />
 
-        {/* Clear dates */}
         {(fromDate || toDate) && (
           <button
             onClick={() => {
@@ -753,18 +888,11 @@ export default function AdminDepositsPage() {
               border: "1px solid rgba(239,68,68,0.22)",
               color: "#f87171",
             }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.background = "rgba(239,68,68,0.2)")
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.background = "rgba(239,68,68,0.12)")
-            }
           >
             <X className="w-3.5 h-3.5" /> Clear dates
           </button>
         )}
 
-        {/* Refresh */}
         <button
           onClick={() => {
             setSpinning(true);
@@ -796,9 +924,9 @@ export default function AdminDepositsPage() {
       >
         {/* Table head */}
         <div
-          className="grid gap-4 px-5 py-3 text-[10px] font-black uppercase tracking-[0.14em]"
+          className="grid gap-3 px-5 py-3 text-[10px] font-black uppercase tracking-[0.14em]"
           style={{
-            gridTemplateColumns: "1.6fr 1.3fr 90px 110px 110px 100px auto",
+            gridTemplateColumns: "1.6fr 1.3fr 90px 110px 110px 100px 130px",
             background: "rgba(200,150,62,0.06)",
             borderBottom: "1px solid rgba(200,150,62,0.1)",
             color: "rgba(228,184,106,0.5)",
@@ -865,10 +993,10 @@ export default function AdminDepositsPage() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: i * 0.02 }}
-                  className="grid gap-4 px-5 py-4 items-center group transition-colors duration-100"
+                  className="grid gap-3 px-5 py-4 items-center transition-colors duration-100"
                   style={{
                     gridTemplateColumns:
-                      "1.6fr 1.3fr 90px 110px 110px 100px auto",
+                      "1.6fr 1.3fr 90px 110px 110px 100px 130px",
                   }}
                   onMouseEnter={(e) =>
                     (e.currentTarget.style.background = "rgba(200,150,62,0.04)")
@@ -974,64 +1102,37 @@ export default function AdminDepositsPage() {
                     {format(new Date(tx.date), "MMM d, yyyy")}
                   </p>
 
-                  {/* Actions */}
-                  <div className="flex items-center gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                    {[
-                      {
-                        Icon: Eye,
-                        title: "View",
-                        color: "#C8963E",
-                        action: () => {
-                          setSelected(tx);
-                          setMode("view");
-                        },
-                      },
-                      {
-                        Icon: Pencil,
-                        title: "Edit",
-                        color: "#E4B86A",
-                        action: () => {
-                          setSelected(tx);
-                          setEditDesc(tx.description ?? "");
-                          setEditDate(tx.date.split("T")[0]);
-                          setMode("edit");
-                        },
-                      },
-                      {
-                        Icon: Trash2,
-                        title: "Reverse",
-                        color: "#f87171",
-                        action: () => {
-                          setSelected(tx);
-                          setMode("delete");
-                        },
-                      },
-                    ].map(({ Icon, title, color, action }) => (
-                      <button
-                        key={title}
-                        onClick={action}
-                        title={title}
-                        className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-150"
-                        style={{
-                          background: "rgba(255,255,255,0.04)",
-                          border: "1px solid rgba(255,255,255,0.06)",
-                        }}
-                        onMouseEnter={(e) => {
-                          (e.currentTarget as HTMLElement).style.background =
-                            `${color}18`;
-                          (e.currentTarget as HTMLElement).style.borderColor =
-                            `${color}40`;
-                        }}
-                        onMouseLeave={(e) => {
-                          (e.currentTarget as HTMLElement).style.background =
-                            "rgba(255,255,255,0.04)";
-                          (e.currentTarget as HTMLElement).style.borderColor =
-                            "rgba(255,255,255,0.06)";
-                        }}
-                      >
-                        <Icon className="w-3.5 h-3.5" style={{ color }} />
-                      </button>
-                    ))}
+                  {/* Actions — always visible */}
+                  <div className="flex items-center gap-1.5 justify-end">
+                    <ActionBtn
+                      icon={Eye}
+                      title="View"
+                      color="#C8963E"
+                      onClick={() => {
+                        setSelected(tx);
+                        setMode("view");
+                      }}
+                    />
+                    <ActionBtn
+                      icon={Pencil}
+                      title="Edit"
+                      color="#60a5fa"
+                      onClick={() => {
+                        setSelected(tx);
+                        setEditDesc(tx.description ?? "");
+                        setEditDate(tx.date.split("T")[0]);
+                        setMode("edit");
+                      }}
+                    />
+                    <ActionBtn
+                      icon={Trash2}
+                      title="Reverse"
+                      color="#f87171"
+                      onClick={() => {
+                        setSelected(tx);
+                        setMode("delete");
+                      }}
+                    />
                   </div>
                 </motion.div>
               );
@@ -1114,6 +1215,254 @@ export default function AdminDepositsPage() {
 
       {/* ════════════════════════════ MODALS ════════════════════════════════ */}
       <AnimatePresence>
+        {/* ── PRINT STATEMENT MODAL ── */}
+        {mode === "statement" && (
+          <Modal title="Print Client Statement" onClose={() => setMode(null)}>
+            <div className="space-y-5">
+              <div
+                className="flex items-center gap-3 p-3.5 rounded-xl"
+                style={{
+                  background: "rgba(200,150,62,0.08)",
+                  border: "1px solid rgba(200,150,62,0.2)",
+                }}
+              >
+                <Printer
+                  className="w-5 h-5 shrink-0"
+                  style={{ color: "#E4B86A" }}
+                />
+                <p
+                  className="text-sm"
+                  style={{ color: "rgba(255,255,255,0.6)" }}
+                >
+                  Select a client and date range to generate and download their
+                  PDF account statement.
+                </p>
+              </div>
+
+              {/* Client selector */}
+              <Field label="Select Client" required>
+                {chosenStmtMember ? (
+                  <div
+                    className="flex items-center gap-3 p-3 rounded-xl"
+                    style={{
+                      background: "rgba(200,150,62,0.10)",
+                      border: "1px solid rgba(200,150,62,0.28)",
+                    }}
+                  >
+                    <div
+                      className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs shrink-0"
+                      style={{
+                        background: "linear-gradient(135deg,#C8963E,#E4B86A)",
+                        color: "#0B1D3A",
+                      }}
+                    >
+                      {initials(chosenStmtMember)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-white">
+                        {chosenStmtMember.firstName} {chosenStmtMember.lastName}
+                      </p>
+                      <p
+                        className="text-[11px]"
+                        style={{ color: "rgba(255,255,255,0.4)" }}
+                      >
+                        {chosenStmtMember.clientId} · {chosenStmtMember.email}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setChosenStmtMember(null)}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                      style={{ background: "rgba(255,255,255,0.07)" }}
+                    >
+                      <X className="w-3.5 h-3.5 text-white/50" />
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    className="rounded-xl overflow-hidden"
+                    style={{
+                      border: "1px solid rgba(200,150,62,0.2)",
+                      background: "rgba(11,29,58,0.70)",
+                    }}
+                  >
+                    <div
+                      className="relative"
+                      style={{
+                        borderBottom: "1px solid rgba(200,150,62,0.12)",
+                      }}
+                    >
+                      <Search
+                        className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none"
+                        style={{ color: "rgba(200,150,62,0.5)" }}
+                      />
+                      <input
+                        placeholder="Filter clients…"
+                        value={stmtMemberFilter}
+                        onChange={(e) => setStmtMemberFilter(e.target.value)}
+                        className="w-full bg-transparent pl-9 pr-4 py-2.5 text-sm text-white placeholder-white/20 outline-none"
+                      />
+                    </div>
+                    <div className="overflow-y-auto" style={{ maxHeight: 180 }}>
+                      {stmtMembersLoading ? (
+                        <div
+                          className="flex items-center justify-center gap-2 py-8"
+                          style={{ color: "rgba(255,255,255,0.3)" }}
+                        >
+                          <Loader2
+                            className="w-4 h-4 animate-spin"
+                            style={{ color: "#C8963E" }}
+                          />
+                          <span className="text-sm">Loading…</span>
+                        </div>
+                      ) : (
+                        (() => {
+                          const q = stmtMemberFilter.toLowerCase();
+                          const filtered = allMembersForStmt.filter(
+                            (m) =>
+                              !q ||
+                              `${m.firstName} ${m.lastName}`
+                                .toLowerCase()
+                                .includes(q) ||
+                              m.clientId.toLowerCase().includes(q),
+                          );
+                          return filtered.length === 0 ? (
+                            <p
+                              className="text-center text-sm py-6"
+                              style={{ color: "rgba(255,255,255,0.25)" }}
+                            >
+                              No clients found
+                            </p>
+                          ) : (
+                            filtered.map((m, i) => (
+                              <button
+                                key={m._id}
+                                type="button"
+                                onClick={() => {
+                                  setChosenStmtMember(m);
+                                  setStmtMemberFilter("");
+                                }}
+                                className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors"
+                                style={{
+                                  borderBottom:
+                                    i < filtered.length - 1
+                                      ? "1px solid rgba(200,150,62,0.07)"
+                                      : "none",
+                                }}
+                                onMouseEnter={(e) =>
+                                  (e.currentTarget.style.background =
+                                    "rgba(200,150,62,0.07)")
+                                }
+                                onMouseLeave={(e) =>
+                                  (e.currentTarget.style.background = "")
+                                }
+                              >
+                                <div
+                                  className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs shrink-0"
+                                  style={{
+                                    background:
+                                      "linear-gradient(135deg,#C8963E,#E4B86A)",
+                                    color: "#0B1D3A",
+                                  }}
+                                >
+                                  {initials(m)}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-bold text-white truncate">
+                                    {m.firstName} {m.lastName}
+                                  </p>
+                                  <p
+                                    className="text-[11px] truncate"
+                                    style={{ color: "rgba(255,255,255,0.38)" }}
+                                  >
+                                    {m.clientId}
+                                  </p>
+                                </div>
+                              </button>
+                            ))
+                          );
+                        })()
+                      )}
+                    </div>
+                  </div>
+                )}
+              </Field>
+
+              {/* Date range */}
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="From Date" required>
+                  <div className="relative">
+                    <Calendar
+                      className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
+                      style={{ color: "rgba(200,150,62,0.5)" }}
+                    />
+                    <input
+                      type="date"
+                      value={stmtFrom}
+                      onChange={(e) => setStmtFrom(e.target.value)}
+                      className={inputCls + " pl-9"}
+                      style={{ ...inputStyle, colorScheme: "dark" }}
+                      onFocus={inputFocus}
+                      onBlur={inputBlur}
+                    />
+                  </div>
+                </Field>
+                <Field label="To Date" required>
+                  <div className="relative">
+                    <Calendar
+                      className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
+                      style={{ color: "rgba(200,150,62,0.5)" }}
+                    />
+                    <input
+                      type="date"
+                      value={stmtTo}
+                      onChange={(e) => setStmtTo(e.target.value)}
+                      className={inputCls + " pl-9"}
+                      style={{ ...inputStyle, colorScheme: "dark" }}
+                      onFocus={inputFocus}
+                      onBlur={inputBlur}
+                    />
+                  </div>
+                </Field>
+              </div>
+
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setMode(null)}
+                  className="flex-1 py-3 rounded-xl text-sm font-semibold"
+                  style={{
+                    background: "rgba(255,255,255,0.06)",
+                    color: "rgba(255,255,255,0.6)",
+                    border: "1px solid rgba(255,255,255,0.10)",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePrintStatement}
+                  disabled={stmtLoading || !chosenStmtMember}
+                  className="flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all hover:-translate-y-0.5 disabled:opacity-50"
+                  style={{
+                    background: "linear-gradient(135deg,#C8963E,#E4B86A)",
+                    color: "#0B1D3A",
+                    boxShadow: "0 6px 20px rgba(200,150,62,0.35)",
+                  }}
+                >
+                  {stmtLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Printer className="w-4 h-4" /> Download PDF
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </Modal>
+        )}
+
         {/* ── RECORD TRANSACTION ── */}
         {mode === "record" && (
           <Modal title="Record Transaction" onClose={() => setMode(null)} wide>
@@ -1156,7 +1505,7 @@ export default function AdminDepositsPage() {
                 </div>
               </Field>
 
-              {/* Step 1 — Select Member */}
+              {/* Select Member */}
               <Field label="Step 1 — Select Member" required>
                 {chosenMember ? (
                   <div
@@ -1193,16 +1542,8 @@ export default function AdminDepositsPage() {
                         setMemberAccounts([]);
                         setChosenAccount(null);
                       }}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors shrink-0"
+                      className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
                       style={{ background: "rgba(255,255,255,0.07)" }}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.background =
-                          "rgba(239,68,68,0.18)")
-                      }
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.background =
-                          "rgba(255,255,255,0.07)")
-                      }
                     >
                       <X className="w-3.5 h-3.5 text-white/50" />
                     </button>
@@ -1215,7 +1556,6 @@ export default function AdminDepositsPage() {
                       background: "rgba(11,29,58,0.70)",
                     }}
                   >
-                    {/* filter bar */}
                     <div
                       className="relative"
                       style={{
@@ -1233,7 +1573,6 @@ export default function AdminDepositsPage() {
                         className="w-full bg-transparent pl-9 pr-4 py-2.5 text-sm text-white placeholder-white/20 outline-none"
                       />
                     </div>
-                    {/* list */}
                     <div className="overflow-y-auto" style={{ maxHeight: 200 }}>
                       {membersLoading ? (
                         <div
@@ -1327,7 +1666,7 @@ export default function AdminDepositsPage() {
                 )}
               </Field>
 
-              {/* Step 2 — Select Account (only shown after member is picked) */}
+              {/* Select Account */}
               {chosenMember && (
                 <Field label="Step 2 — Select Account" required>
                   {acctLoading ? (
@@ -1379,16 +1718,6 @@ export default function AdminDepositsPage() {
                               borderLeft: isSel
                                 ? "3px solid #C8963E"
                                 : "3px solid transparent",
-                            }}
-                            onMouseEnter={(e) => {
-                              if (!isSel)
-                                e.currentTarget.style.background =
-                                  "rgba(200,150,62,0.06)";
-                            }}
-                            onMouseLeave={(e) => {
-                              if (!isSel)
-                                e.currentTarget.style.background =
-                                  "rgba(11,29,58,0.50)";
                             }}
                           >
                             <div
@@ -1454,7 +1783,7 @@ export default function AdminDepositsPage() {
                 </Field>
               )}
 
-              {/* Step 3 — Amount, date, description */}
+              {/* Amount, date, description */}
               {chosenAccount && (
                 <>
                   <div className="grid grid-cols-2 gap-4">
@@ -1625,7 +1954,6 @@ export default function AdminDepositsPage() {
         {mode === "view" && selected && (
           <Modal title="Transaction Details" onClose={() => setMode(null)}>
             <div className="space-y-4">
-              {/* Type hero */}
               <div
                 className="flex items-center gap-4 p-4 rounded-xl"
                 style={{
@@ -1677,7 +2005,6 @@ export default function AdminDepositsPage() {
                 </p>
               </div>
 
-              {/* Detail rows */}
               <div className="space-y-2">
                 {[
                   {
@@ -1787,7 +2114,6 @@ export default function AdminDepositsPage() {
         {mode === "edit" && selected && (
           <Modal title="Edit Transaction" onClose={() => setMode(null)}>
             <form onSubmit={handleEdit} className="space-y-4">
-              {/* Read-only info */}
               <div
                 className="flex items-center gap-3 p-3.5 rounded-xl"
                 style={{
@@ -1937,7 +2263,6 @@ export default function AdminDepositsPage() {
                   and restore the account balance accordingly.
                 </p>
 
-                {/* Transaction summary */}
                 <div
                   className="mt-4 p-3.5 rounded-xl text-left space-y-2"
                   style={{
@@ -1945,46 +2270,60 @@ export default function AdminDepositsPage() {
                     border: "1px solid rgba(255,255,255,0.08)",
                   }}
                 >
-                  <div className="flex justify-between text-sm">
-                    <span style={{ color: "rgba(255,255,255,0.4)" }}>
-                      Member
-                    </span>
-                    <span className="text-white font-semibold">
-                      {selected.clientId?.firstName}{" "}
-                      {selected.clientId?.lastName}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span style={{ color: "rgba(255,255,255,0.4)" }}>
-                      Account
-                    </span>
-                    <span className="font-mono text-[#E4B86A] text-xs">
-                      {selected.accountId?.accountNumber}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span style={{ color: "rgba(255,255,255,0.4)" }}>
-                      Amount
-                    </span>
-                    <span
-                      className="font-bold"
-                      style={{
-                        color:
-                          selected.transactionType === "deposit"
-                            ? "#4ade80"
-                            : "#f87171",
-                      }}
-                    >
-                      {selected.transactionType === "deposit" ? "+" : "-"}
-                      {fmt(selected.amount)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span style={{ color: "rgba(255,255,255,0.4)" }}>Date</span>
-                    <span className="text-white">
-                      {format(new Date(selected.date), "MMM d, yyyy")}
-                    </span>
-                  </div>
+                  {[
+                    {
+                      label: "Member",
+                      value: `${selected.clientId?.firstName} ${selected.clientId?.lastName}`,
+                    },
+                    {
+                      label: "Account",
+                      value: selected.accountId?.accountNumber,
+                      mono: true,
+                    },
+                    {
+                      label: "Amount",
+                      value: `${selected.transactionType === "deposit" ? "+" : "-"}${fmt(selected.amount)}`,
+                      color:
+                        selected.transactionType === "deposit"
+                          ? "#4ade80"
+                          : "#f87171",
+                    },
+                    {
+                      label: "Date",
+                      value: format(new Date(selected.date), "MMM d, yyyy"),
+                    },
+                  ].map(({ label, value, mono, color }) => (
+                    <div key={label} className="flex justify-between text-sm">
+                      <span style={{ color: "rgba(255,255,255,0.4)" }}>
+                        {label}
+                      </span>
+                      <span
+                        className={
+                          mono
+                            ? "font-mono text-[#E4B86A] text-xs"
+                            : "font-semibold"
+                        }
+                        style={{ color: color || "white" }}
+                      >
+                        {value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Warning note */}
+                <div
+                  className="mt-3 flex items-start gap-2.5 px-4 py-3 rounded-xl text-left"
+                  style={{
+                    background: "rgba(239,68,68,0.08)",
+                    border: "1px solid rgba(239,68,68,0.18)",
+                  }}
+                >
+                  <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                  <p className="text-xs text-red-300 leading-relaxed">
+                    The account balance will be restored to its state before
+                    this transaction. This action cannot be undone.
+                  </p>
                 </div>
               </div>
 
@@ -2004,7 +2343,10 @@ export default function AdminDepositsPage() {
                   onClick={handleDelete}
                   disabled={delLoading}
                   className="flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-50"
-                  style={{ background: "rgba(239,68,68,0.85)", color: "white" }}
+                  style={{
+                    background: "rgba(239,68,68,0.85)",
+                    color: "white",
+                  }}
                 >
                   {delLoading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />

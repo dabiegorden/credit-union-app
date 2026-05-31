@@ -21,6 +21,7 @@ import {
   DollarSign,
   Users2,
   FileText,
+  Users2Icon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -69,6 +70,11 @@ export const staffMenuItems = [
         title: "Deposits | Withdrawals",
         url: "/staff-dashboard/deposits",
         icon: DollarSign,
+      },
+      {
+        title: "Savings Accounts",
+        url: "/staff-dashboard/savings-accounts",
+        icon: Users2Icon,
       },
     ],
   },

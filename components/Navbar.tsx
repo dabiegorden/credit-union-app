@@ -226,12 +226,12 @@ export default function Navbar() {
                 >
                   Sign In
                 </Link>
-                <Link
+                {/* <Link
                   href="/register"
                   className="px-5 py-2 text-sm font-semibold text-[#0B1D3A] bg-linear-to-r from-[#C8963E] to-[#E4B86A] rounded-lg shadow-[0_4px_14px_rgba(200,150,62,0.4)] hover:-translate-y-0.5 hover:shadow-[0_8px_22px_rgba(200,150,62,0.55)] transition-all duration-200"
                 >
                   Get Started
-                </Link>
+                </Link> */}
               </>
             ) : (
               /* ── Skeleton while checking ── */
@@ -348,13 +348,13 @@ export default function Navbar() {
                     >
                       Sign In
                     </Link>
-                    <Link
+                    {/* <Link
                       href="/register"
                       onClick={closeDrawer}
                       className="w-full py-3 text-sm font-bold text-center text-[#0B1D3A] bg-linear-to-r from-[#C8963E] to-[#E4B86A] rounded-xl shadow-[0_4px_14px_rgba(200,150,62,0.4)] hover:shadow-[0_8px_22px_rgba(200,150,62,0.55)] transition-all duration-200"
                     >
                       Get Started →
-                    </Link>
+                    </Link> */}
                   </>
                 )}
               </div>
