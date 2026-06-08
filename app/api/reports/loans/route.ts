@@ -18,6 +18,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Loan from "@/models/Loan";
 import LoanRepayment from "@/models/LoanRepayment";
+import ApprovalRequest from "@/models/ApprovalRequest";
 import { authMiddleware } from "@/middleware/Authmiddleware";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -45,6 +46,32 @@ export async function GET(request: NextRequest) {
     const purposeFilt = searchParams.get("purpose") || "";
     const clientIdStr = searchParams.get("clientId") || "";
     const isExport = searchParams.get("export") === "1";
+
+    // Staff must have an admin-approved, unused export request before they
+    // can download/print loan reports.
+    if (isExport && auth.user?.role === "staff") {
+      const approval = await ApprovalRequest.findOne({
+        requestedBy: auth.user.userId,
+        action: "report_export",
+        status: "approved",
+        used: false,
+        "payload.reportType": "loans",
+      }).sort({ reviewedAt: -1 });
+
+      if (!approval) {
+        return NextResponse.json(
+          {
+            error:
+              "Printing/exporting reports requires admin approval. Please submit a request and wait for it to be approved.",
+            requiresApproval: true,
+          },
+          { status: 403 },
+        );
+      }
+
+      approval.used = true;
+      await approval.save();
+    }
 
     /* ── Base match for loan applications ── */
     const loanMatch: Record<string, unknown> = {

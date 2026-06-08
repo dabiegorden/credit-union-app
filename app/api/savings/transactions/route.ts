@@ -145,13 +145,24 @@ export async function POST(request: NextRequest) {
     }
 
     // Balance check for withdrawals
-    if (transactionType === "withdrawal" && amount > account.balance) {
-      return NextResponse.json(
-        {
-          error: `Insufficient balance. Current balance: GHS${account.balance.toFixed(2)}`,
-        },
-        { status: 400 },
-      );
+    const MINIMUM_BALANCE = 50;
+    if (transactionType === "withdrawal") {
+      if (amount > account.balance) {
+        return NextResponse.json(
+          {
+            error: `Insufficient balance. Current balance: GHS${account.balance.toFixed(2)}`,
+          },
+          { status: 400 },
+        );
+      }
+      if (account.balance - amount < MINIMUM_BALANCE) {
+        return NextResponse.json(
+          {
+            error: `Withdrawal denied. You must maintain a minimum balance of GHS${MINIMUM_BALANCE.toFixed(2)}. Maximum withdrawable amount: GHS${Math.max(account.balance - MINIMUM_BALANCE, 0).toFixed(2)}`,
+          },
+          { status: 400 },
+        );
+      }
     }
 
     // Update account balance

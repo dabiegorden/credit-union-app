@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Client from "@/models/Client";
 import { authMiddleware } from "@/middleware/Authmiddleware";
+import { sendWelcomeEmail } from "@/lib/mailer";
 import { z } from "zod";
 
 const createClientSchema = z.object({
@@ -112,7 +113,22 @@ export async function POST(request: NextRequest) {
       ...data,
       dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
       openedBy: auth.user!.userId,
+      // New clients are inactive until an admin authorizes portal access
+      status: "inactive",
     });
+
+    try {
+      await sendWelcomeEmail({
+        to: client.email,
+        name: `${client.firstName} ${client.lastName}`,
+        email: client.email,
+        password: data.password,
+        portalType: "client",
+        pendingApproval: true,
+      });
+    } catch (emailErr) {
+      console.error("[POST /api/clients] welcome email failed:", emailErr);
+    }
 
     const clientObj = client.toObject();
     delete (clientObj as any).password;

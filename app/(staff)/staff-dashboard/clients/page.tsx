@@ -94,6 +94,8 @@ export default function ClientsPage() {
   const [formLoading, setFormLoading] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [editReason, setEditReason] = useState("");
+  const [deleteReason, setDeleteReason] = useState("");
   const [pagination, setPagination] = useState({
     total: 0,
     page: 1,
@@ -164,6 +166,7 @@ export default function ClientsPage() {
   const closeModal = () => {
     setModalMode(null);
     setSelected(null);
+    setEditReason("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -171,26 +174,52 @@ export default function ClientsPage() {
     setFormLoading(true);
     try {
       const isEdit = modalMode === "edit" && selected;
-      const url = isEdit ? `/api/clients/${selected._id}` : "/api/clients";
-      const method = isEdit ? "PUT" : "POST";
-      const body = isEdit
-        ? {
-            firstName: form.firstName,
-            lastName: form.lastName,
-            phone: form.phone,
-            email: form.email,
-            address: form.address,
-            occupation: form.occupation,
-            status: form.status,
-          }
-        : {
-            ...form,
-            dateOfBirth: form.dateOfBirth || undefined,
-            occupation: form.occupation || undefined,
-          };
 
-      const res = await fetch(url, {
-        method,
+      if (isEdit) {
+        // Staff cannot edit clients directly — submit a request for admin approval.
+        if (!editReason.trim()) {
+          toast.error("Please explain why this edit is needed");
+          return;
+        }
+        const res = await fetch("/api/approval-requests", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            action: "client_edit",
+            targetId: selected._id,
+            targetLabel: `${selected.firstName} ${selected.lastName} (${selected.clientId})`,
+            payload: {
+              firstName: form.firstName,
+              lastName: form.lastName,
+              phone: form.phone,
+              email: form.email,
+              address: form.address,
+              occupation: form.occupation,
+              status: form.status,
+            },
+            reason: editReason.trim(),
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          toast.error(data.error ?? "Failed to submit request");
+          return;
+        }
+        toast.success("Edit request sent to admin for approval");
+        setEditReason("");
+        closeModal();
+        return;
+      }
+
+      const body = {
+        ...form,
+        dateOfBirth: form.dateOfBirth || undefined,
+        occupation: form.occupation || undefined,
+      };
+
+      const res = await fetch("/api/clients", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify(body),
@@ -200,7 +229,7 @@ export default function ClientsPage() {
         toast.error(data.error ?? "Operation failed");
         return;
       }
-      toast.success(isEdit ? "Client updated" : "Client registered");
+      toast.success("Client registered");
       closeModal();
       fetchClients();
     } catch {
@@ -212,20 +241,35 @@ export default function ClientsPage() {
 
   const handleDelete = async () => {
     if (!deleteId) return;
+    if (!deleteReason.trim()) {
+      toast.error("Please explain why this client should be deleted");
+      return;
+    }
+    const target = clients.find((c) => c._id === deleteId);
     setDeleteLoading(true);
     try {
-      const res = await fetch(`/api/clients/${deleteId}`, {
-        method: "DELETE",
+      // Staff cannot delete clients directly — submit a request for admin approval.
+      const res = await fetch("/api/approval-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         credentials: "include",
+        body: JSON.stringify({
+          action: "client_delete",
+          targetId: deleteId,
+          targetLabel: target
+            ? `${target.firstName} ${target.lastName} (${target.clientId})`
+            : undefined,
+          reason: deleteReason.trim(),
+        }),
       });
+      const data = await res.json();
       if (!res.ok) {
-        const d = await res.json();
-        toast.error(d.error ?? "Delete failed");
+        toast.error(data.error ?? "Failed to submit request");
         return;
       }
-      toast.success("Client deleted");
+      toast.success("Delete request sent to admin for approval");
       setDeleteId(null);
-      fetchClients();
+      setDeleteReason("");
     } catch {
       toast.error("Network error");
     } finally {
@@ -543,7 +587,11 @@ export default function ClientsPage() {
         {(modalMode === "add" || modalMode === "edit") && (
           <Modal
             onClose={closeModal}
-            title={modalMode === "add" ? "Register New Client" : "Edit Client"}
+            title={
+              modalMode === "add"
+                ? "Register New Client"
+                : "Request Client Edit"
+            }
           >
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -662,6 +710,30 @@ export default function ClientsPage() {
                   </select>
                 </Field>
               )}
+              {modalMode === "edit" && (
+                <Field label="Reason for this edit (sent to admin)" required>
+                  <textarea
+                    value={editReason}
+                    onChange={(e) => setEditReason(e.target.value)}
+                    placeholder="Explain why these changes are needed…"
+                    rows={3}
+                    required
+                    className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 outline-none resize-none"
+                    style={{
+                      background: "rgba(11,29,58,0.70)",
+                      border: "1px solid rgba(200,150,62,0.20)",
+                    }}
+                  />
+                  <p
+                    className="text-[11px] mt-2"
+                    style={{ color: "rgba(255,255,255,0.35)" }}
+                  >
+                    Staff cannot edit clients directly. This request will be
+                    sent to an admin for approval, and the changes will be
+                    applied once approved.
+                  </p>
+                </Field>
+              )}
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
@@ -689,7 +761,7 @@ export default function ClientsPage() {
                   ) : modalMode === "add" ? (
                     "Register Client"
                   ) : (
-                    "Save Changes"
+                    "Submit for Approval"
                   )}
                 </button>
               </div>
@@ -779,7 +851,7 @@ export default function ClientsPage() {
                     color: "#0B1D3A",
                   }}
                 >
-                  <Pencil className="w-4 h-4" /> Edit Client
+                  <Pencil className="w-4 h-4" /> Request Edit
                 </button>
                 <button
                   onClick={() =>
@@ -803,7 +875,14 @@ export default function ClientsPage() {
       {/* DELETE CONFIRM */}
       <AnimatePresence>
         {deleteId && (
-          <Modal onClose={() => setDeleteId(null)} title="Delete Client" small>
+          <Modal
+            onClose={() => {
+              setDeleteId(null);
+              setDeleteReason("");
+            }}
+            title="Request Client Deletion"
+            small
+          >
             <div className="text-center space-y-4">
               <div
                 className="w-14 h-14 rounded-full flex items-center justify-center mx-auto"
@@ -815,17 +894,39 @@ export default function ClientsPage() {
                 <Trash2 className="w-6 h-6 text-red-400" />
               </div>
               <div>
-                <p className="text-white font-bold">Delete this client?</p>
+                <p className="text-white font-bold">
+                  Request approval to delete this client?
+                </p>
                 <p
                   className="text-sm mt-1"
                   style={{ color: "rgba(255,255,255,0.45)" }}
                 >
-                  Only allowed if no active loans and zero balance.
+                  Staff cannot delete clients directly. An admin must review
+                  and approve this request before the client is removed.
                 </p>
+              </div>
+              <div className="text-left">
+                <Field label="Reason for deletion (sent to admin)" required>
+                  <textarea
+                    value={deleteReason}
+                    onChange={(e) => setDeleteReason(e.target.value)}
+                    placeholder="Explain why this client should be deleted…"
+                    rows={3}
+                    required
+                    className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 outline-none resize-none"
+                    style={{
+                      background: "rgba(11,29,58,0.70)",
+                      border: "1px solid rgba(200,150,62,0.20)",
+                    }}
+                  />
+                </Field>
               </div>
               <div className="flex gap-3">
                 <button
-                  onClick={() => setDeleteId(null)}
+                  onClick={() => {
+                    setDeleteId(null);
+                    setDeleteReason("");
+                  }}
                   className="flex-1 py-3 rounded-xl text-sm font-semibold"
                   style={{
                     background: "rgba(255,255,255,0.06)",
@@ -844,7 +945,7 @@ export default function ClientsPage() {
                   {deleteLoading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
-                    "Delete"
+                    "Submit for Approval"
                   )}
                 </button>
               </div>

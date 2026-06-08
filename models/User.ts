@@ -6,6 +6,7 @@ export interface IUser extends Document {
   email: string;
   password: string;
   role: "admin" | "staff" | "client";
+  isApproved: boolean;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(password: string): Promise<boolean>;
@@ -35,6 +36,14 @@ const UserSchema = new Schema<IUser>(
       type: String,
       enum: ["admin", "staff", "client"],
       default: "staff",
+    },
+    // Staff/admin accounts must be approved by an admin before they can log in.
+    // Existing admin accounts created before this field was added are treated as approved.
+    isApproved: {
+      type: Boolean,
+      default: function (this: { role?: string }) {
+        return this.role === "admin";
+      },
     },
   },
   { timestamps: true },

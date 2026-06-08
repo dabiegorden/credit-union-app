@@ -314,6 +314,78 @@ export default function LoanReportPage() {
   const [purposeF, setPurposeF] = useState("");
   const [chartType, setChartType] = useState<"bar" | "area" | "line">("area");
 
+  /* ── Export approval gate (staff must request admin approval to export) ── */
+  const [approvalState, setApprovalState] = useState<
+    "checking" | "none" | "pending" | "approved" | "rejected"
+  >("checking");
+  const [requestModalOpen, setRequestModalOpen] = useState(false);
+  const [requestReason, setRequestReason] = useState("");
+  const [requestSubmitting, setRequestSubmitting] = useState(false);
+
+  const fetchApprovalState = useCallback(async () => {
+    try {
+      const res = await fetch(
+        `/api/approval-requests?action=report_export`,
+        { credentials: "include" },
+      );
+      const json = await res.json();
+      if (!res.ok) throw new Error();
+      const mine = (json.requests ?? []).filter(
+        (r: { payload?: { reportType?: string } }) =>
+          r.payload?.reportType === "loans",
+      );
+      if (mine.length === 0) {
+        setApprovalState("none");
+        return;
+      }
+      const latest = mine[0];
+      if (latest.status === "approved" && !latest.used)
+        setApprovalState("approved");
+      else if (latest.status === "pending") setApprovalState("pending");
+      else setApprovalState(latest.status === "rejected" ? "rejected" : "none");
+    } catch {
+      setApprovalState("none");
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchApprovalState();
+  }, [fetchApprovalState]);
+
+  const submitExportRequest = async () => {
+    if (!requestReason.trim()) {
+      toast.error("Please explain why you need to export this report");
+      return;
+    }
+    setRequestSubmitting(true);
+    try {
+      const res = await fetch("/api/approval-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          action: "report_export",
+          targetLabel: "Loan Report Export",
+          payload: { reportType: "loans", from: fromDate, to: toDate },
+          reason: requestReason.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Failed to submit request");
+        return;
+      }
+      toast.success("Export request sent to admin for approval");
+      setRequestModalOpen(false);
+      setRequestReason("");
+      setApprovalState("pending");
+    } catch {
+      toast.error("Network error");
+    } finally {
+      setRequestSubmitting(false);
+    }
+  };
+
   /* ── Fetch ── */
   const fetchReport = useCallback(
     async (showSpinner = false) => {
@@ -359,7 +431,12 @@ export default function LoanReportPage() {
         credentials: "include",
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error);
+      if (!res.ok) {
+        if (json.requiresApproval) setApprovalState("none");
+        throw new Error(json.error);
+      }
+      // Approval was consumed by the export — refresh gate state
+      setApprovalState("none");
 
       const wb = XLSX.utils.book_new();
 
@@ -648,24 +725,132 @@ export default function LoanReportPage() {
               : ""}
           </p>
         </div>
-        <button
-          onClick={handleExport}
-          disabled={exporting}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm shrink-0 transition-all hover:-translate-y-0.5 disabled:opacity-60"
+        {approvalState === "approved" ? (
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm shrink-0 transition-all hover:-translate-y-0.5 disabled:opacity-60"
+            style={{
+              background: "linear-gradient(135deg,#C8963E,#E4B86A)",
+              color: "#0B1D3A",
+              boxShadow: "0 6px 24px rgba(200,150,62,0.4)",
+            }}
+          >
+            {exporting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            Export Excel (4 sheets)
+          </button>
+        ) : approvalState === "pending" ? (
+          <div
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm shrink-0"
+            style={{
+              background: "rgba(200,150,62,0.10)",
+              border: "1px solid rgba(200,150,62,0.25)",
+              color: "#E4B86A",
+            }}
+          >
+            <ShieldAlert className="w-4 h-4" />
+            Awaiting Admin Approval
+          </div>
+        ) : (
+          <button
+            onClick={() => setRequestModalOpen(true)}
+            disabled={approvalState === "checking"}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm shrink-0 transition-all hover:-translate-y-0.5 disabled:opacity-60"
+            style={{
+              background: "rgba(200,150,62,0.12)",
+              border: "1px solid rgba(200,150,62,0.3)",
+              color: "#E4B86A",
+            }}
+          >
+            <ShieldCheck className="w-4 h-4" />
+            Request Export Approval
+          </button>
+        )}
+      </div>
+
+      {/* Export approval request modal */}
+      {requestModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{
-            background: "linear-gradient(135deg,#C8963E,#E4B86A)",
-            color: "#0B1D3A",
-            boxShadow: "0 6px 24px rgba(200,150,62,0.4)",
+            background: "rgba(11,29,58,0.80)",
+            backdropFilter: "blur(8px)",
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setRequestModalOpen(false);
           }}
         >
-          {exporting ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Download className="w-4 h-4" />
-          )}
-          Export Excel (4 sheets)
-        </button>
-      </div>
+          <div
+            className="w-full rounded-2xl overflow-hidden"
+            style={{
+              maxWidth: 460,
+              background: "#0e1f3d",
+              border: "1px solid rgba(200,150,62,0.2)",
+            }}
+          >
+            <div
+              className="px-6 py-5"
+              style={{ borderBottom: "1px solid rgba(200,150,62,0.12)" }}
+            >
+              <h2 className="font-serif font-black text-white text-lg">
+                Request Export Approval
+              </h2>
+              <p
+                className="text-xs mt-1"
+                style={{ color: "rgba(255,255,255,0.4)" }}
+              >
+                Staff cannot print or export reports directly. Submit a
+                request and an admin must approve it first.
+              </p>
+            </div>
+            <div className="px-6 py-6 space-y-4">
+              <textarea
+                value={requestReason}
+                onChange={(e) => setRequestReason(e.target.value)}
+                placeholder="Explain why you need to export this report…"
+                rows={3}
+                className="w-full rounded-xl px-4 py-3 text-sm text-white placeholder-white/20 outline-none resize-none"
+                style={{
+                  background: "rgba(11,29,58,0.70)",
+                  border: "1px solid rgba(200,150,62,0.20)",
+                }}
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setRequestModalOpen(false)}
+                  className="flex-1 py-3 rounded-xl text-sm font-semibold"
+                  style={{
+                    background: "rgba(255,255,255,0.06)",
+                    color: "rgba(255,255,255,0.6)",
+                    border: "1px solid rgba(255,255,255,0.10)",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={submitExportRequest}
+                  disabled={requestSubmitting}
+                  className="flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60"
+                  style={{
+                    background: "linear-gradient(135deg,#C8963E,#E4B86A)",
+                    color: "#0B1D3A",
+                  }}
+                >
+                  {requestSubmitting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    "Submit Request"
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Filters ── */}
       <div

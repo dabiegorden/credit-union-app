@@ -596,7 +596,7 @@ export default function AdminDashboard() {
             Admin Dashboard
           </div>
           <h1 className="font-serif font-black text-white text-2xl sm:text-3xl">
-            Welcome Back, <span style={{ color: "#E4B86A" }}>Admin</span>
+            Welcome Back, <span style={{ color: "#E4B86A" }}>Staff</span>
           </h1>
           <p
             className="text-sm mt-1"

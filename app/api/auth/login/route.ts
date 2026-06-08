@@ -3,11 +3,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import Client from "@/models/Client";
-import { generateToken } from "@/lib/jwt";
+import { generatePendingToken } from "@/lib/jwt";
+import { generateAndStoreOtp } from "@/lib/otp";
+import { sendOtpEmail } from "@/lib/mailer";
+
+function invalidCredentials() {
+  return NextResponse.json(
+    { error: "Invalid email or password" },
+    { status: 401 },
+  );
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, portalType } = await request.json();
+    const { email, password } = await request.json();
 
     if (!email || !password) {
       return NextResponse.json(
@@ -18,132 +27,90 @@ export async function POST(request: NextRequest) {
 
     await connectDB();
 
-    // ── Client portal ────────────────────────────────────────────
-    if (portalType === "client") {
-      const client = await Client.findOne({
-        email: email.toLowerCase().trim(),
-      }).select("+password");
+    const normalizedEmail = email.toLowerCase().trim();
 
-      if (!client) {
-        console.log("[login] client not found for email:", email);
-        return NextResponse.json(
-          { error: "Invalid email or password" },
-          { status: 401 },
-        );
-      }
+    // Look up the account by email regardless of which portal tab was
+    // selected — the selected tab is just a UI convenience and shouldn't
+    // block a valid login (e.g. a staff member left on the default
+    // "Client" tab would otherwise see a confusing "invalid credentials").
+    const [client, user] = await Promise.all([
+      Client.findOne({ email: normalizedEmail }).select("+password"),
+      User.findOne({ email: normalizedEmail }).select("+password"),
+    ]);
 
-      if (!client.password) {
-        console.error(
-          "[login] client found but password field is missing — check select:false and .select('+password')",
-        );
-        return NextResponse.json(
-          { error: "Invalid email or password" },
-          { status: 401 },
-        );
-      }
-
+    // ── Client account ───────────────────────────────────────────
+    if (client?.password) {
       const passwordMatch = await client.comparePassword(password);
-      if (!passwordMatch) {
-        console.log("[login] password mismatch for client:", email);
-        return NextResponse.json(
-          { error: "Invalid email or password" },
-          { status: 401 },
-        );
-      }
+      if (passwordMatch) {
+        if (client.status !== "active") {
+          return NextResponse.json(
+            { error: "Your account is not active. Please contact support." },
+            { status: 403 },
+          );
+        }
 
-      if (client.status !== "active") {
-        return NextResponse.json(
-          { error: "Your account is not active. Please contact support." },
-          { status: 403 },
-        );
-      }
-
-      await Client.findByIdAndUpdate(client._id, { lastLogin: new Date() });
-
-      const token = generateToken({
-        userId: client._id.toString(),
-        email: client.email,
-        role: "client",
-      });
-
-      const res = NextResponse.json({
-        success: true,
-        message: "Login successful",
-        token,
-        user: {
-          id: client._id,
+        const otp = await generateAndStoreOtp(client._id.toString());
+        await sendOtpEmail({
+          to: client.email,
           name: `${client.firstName} ${client.lastName}`,
+          otp,
+          portalType: "client",
+        });
+
+        const pendingToken = generatePendingToken({
+          userId: client._id.toString(),
           email: client.email,
           role: "client",
-        },
-      });
+        });
 
-      res.cookies.set("token", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: 7 * 24 * 60 * 60,
-      });
-
-      return res;
+        return NextResponse.json({
+          success: true,
+          requiresOtp: true,
+          pendingToken,
+          message: "OTP sent to your email address.",
+        });
+      }
     }
 
-    // ── Staff / Admin portal ─────────────────────────────────────
-    const user = await User.findOne({
-      email: email.toLowerCase().trim(),
-    }).select("+password");
+    // ── Staff / Admin account ────────────────────────────────────
+    if (user?.password) {
+      const passwordMatch = await user.comparePassword(password);
+      if (passwordMatch) {
+        if (!user.isApproved) {
+          return NextResponse.json(
+            {
+              error:
+                "Your account is pending admin approval. Please wait until an administrator authorizes access.",
+            },
+            { status: 403 },
+          );
+        }
 
-    if (!user) {
-      console.log("[login] user not found for email:", email);
-      return NextResponse.json(
-        { error: "Invalid email or password" },
-        { status: 401 },
-      );
+        const otp = await generateAndStoreOtp(user._id.toString());
+        await sendOtpEmail({
+          to: user.email,
+          name: user.name,
+          otp,
+          portalType: user.role as "staff" | "admin",
+        });
+
+        const pendingToken = generatePendingToken({
+          userId: user._id.toString(),
+          email: user.email,
+          role: user.role,
+        });
+
+        return NextResponse.json({
+          success: true,
+          requiresOtp: true,
+          pendingToken,
+          message: "OTP sent to your email address.",
+        });
+      }
     }
 
-    if (!user.password) {
-      console.error("[login] user found but password field missing");
-      return NextResponse.json(
-        { error: "Invalid email or password" },
-        { status: 401 },
-      );
-    }
-
-    const passwordMatch = await user.comparePassword(password);
-    if (!passwordMatch) {
-      console.log("[login] password mismatch for user:", email);
-      return NextResponse.json(
-        { error: "Invalid email or password" },
-        { status: 401 },
-      );
-    }
-
-    const token = generateToken({
-      userId: user._id.toString(),
-      email: user.email,
-      role: user.role,
-    });
-
-    const res = NextResponse.json({
-      success: true,
-      message: "Login successful",
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
-    });
-
-    res.cookies.set("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60,
-    });
-
-    return res;
+    // No matching account/password in either collection
+    return invalidCredentials();
   } catch (error) {
     console.error("[login] unexpected error:", error);
     return NextResponse.json({ error: "Login failed" }, { status: 500 });

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import { verifyToken } from "@/lib/jwt";
+import { sendWelcomeEmail } from "@/lib/mailer";
 
 // GET /api/admin/users?role=client|staff|all&page=1&limit=20&search=
 export async function GET(request: NextRequest) {
@@ -107,6 +108,19 @@ export async function POST(request: NextRequest) {
       role,
     });
 
+    try {
+      await sendWelcomeEmail({
+        to: user.email,
+        name: user.name,
+        email: user.email,
+        password,
+        portalType: user.role as "staff" | "admin" | "client",
+        pendingApproval: !user.isApproved,
+      });
+    } catch (emailErr) {
+      console.error("[POST /api/admin/users] welcome email failed:", emailErr);
+    }
+
     return NextResponse.json(
       {
         success: true,
@@ -116,6 +130,7 @@ export async function POST(request: NextRequest) {
           name: user.name,
           email: user.email,
           role: user.role,
+          isApproved: user.isApproved,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt,
         },

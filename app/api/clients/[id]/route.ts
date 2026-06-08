@@ -75,7 +75,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const auth = await authMiddleware(request, ["admin", "staff"]);
+    const auth = await authMiddleware(request, ["admin"]);
     if (!auth.isValid) return auth.response!;
 
     const { id } = await params;

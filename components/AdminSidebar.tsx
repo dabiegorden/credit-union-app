@@ -31,6 +31,7 @@ import {
   UserCog,
   Users2,
   DollarSign,
+  ShieldCheck,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -104,6 +105,12 @@ export const menuItems = [
         icon: ClipboardList,
       },
     ],
+  },
+
+  {
+    title: "Approvals",
+    url: "/admin-dashboard/approvals",
+    icon: ShieldCheck,
   },
 
   {

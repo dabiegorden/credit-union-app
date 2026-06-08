@@ -47,6 +47,7 @@ interface UserRecord {
   name: string;
   email: string;
   role: "admin" | "staff" | "client";
+  isApproved?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -138,6 +139,7 @@ function UserFormModal({ open, onClose, onSuccess, editUser }: FormModalProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
+  const [isApproved, setIsApproved] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -146,6 +148,7 @@ function UserFormModal({ open, onClose, onSuccess, editUser }: FormModalProps) {
       setName(editUser?.name ?? "");
       setEmail(editUser?.email ?? "");
       setPassword("");
+      setIsApproved(editUser?.isApproved ?? false);
       setErrors({});
       setShowPw(false);
     }
@@ -166,8 +169,13 @@ function UserFormModal({ open, onClose, onSuccess, editUser }: FormModalProps) {
     if (!validate()) return;
     setLoading(true);
     try {
-      const payload: Record<string, string> = { name, email, role: "staff" };
+      const payload: Record<string, string | boolean> = {
+        name,
+        email,
+        role: "staff",
+      };
       if (password) payload.password = password;
+      if (isEdit) payload.isApproved = isApproved;
 
       const res = await fetch(
         isEdit ? `/api/users/${editUser!._id}` : "/api/users",
@@ -298,6 +306,37 @@ function UserFormModal({ open, onClose, onSuccess, editUser }: FormModalProps) {
                 <p className="text-red-400 text-xs">{errors.password}</p>
               )}
             </div>
+
+            {isEdit && (
+              <div className="space-y-1.5">
+                <Label className="text-white/60 text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                  <Shield className="w-3 h-3 text-[#C8963E]" /> Portal Access
+                </Label>
+                <button
+                  type="button"
+                  onClick={() => setIsApproved((a) => !a)}
+                  className="w-full h-11 rounded-xl border flex items-center justify-between px-4 text-sm font-semibold transition-colors"
+                  style={{
+                    background: isApproved
+                      ? "rgba(34,197,94,0.08)"
+                      : "rgba(248,113,113,0.08)",
+                    borderColor: isApproved
+                      ? "rgba(34,197,94,0.3)"
+                      : "rgba(248,113,113,0.3)",
+                    color: isApproved ? "#4ade80" : "#f87171",
+                  }}
+                >
+                  <span>
+                    {isApproved
+                      ? "Approved — can sign in"
+                      : "Pending — blocked from sign in"}
+                  </span>
+                  <span className="text-xs underline opacity-70">
+                    {isApproved ? "Revoke" : "Approve"}
+                  </span>
+                </button>
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <Label className="text-white/60 text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
@@ -651,7 +690,7 @@ export default function StaffAccountsPage() {
           <table className="w-full">
             <thead>
               <tr style={{ borderBottom: "1px solid rgba(200,150,62,0.08)" }}>
-                {["User", "Email", "Role", "Joined", "Actions"].map((h) => (
+                {["User", "Email", "Role", "Status", "Joined", "Actions"].map((h) => (
                   <th
                     key={h}
                     className={`text-left px-5 py-3.5 text-[10px] font-black uppercase tracking-[0.15em] ${h === "Actions" ? "text-right" : ""}`}
@@ -666,7 +705,7 @@ export default function StaffAccountsPage() {
               {loading ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <tr key={i}>
-                    <td colSpan={5} className="px-5 py-3">
+                    <td colSpan={6} className="px-5 py-3">
                       <div
                         className="h-10 rounded-xl animate-pulse"
                         style={{ background: "rgba(200,150,62,0.05)" }}
@@ -676,7 +715,7 @@ export default function StaffAccountsPage() {
                 ))
               ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-20 text-center">
+                  <td colSpan={6} className="py-20 text-center">
                     <Users
                       className="w-6 h-6 mx-auto mb-3"
                       style={{ color: "rgba(200,150,62,0.35)" }}
@@ -753,6 +792,22 @@ export default function StaffAccountsPage() {
                           }}
                         >
                           {user.role}
+                        </span>
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-5 py-3.5">
+                        <span
+                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider"
+                          style={{
+                            background: user.isApproved
+                              ? "rgba(34,197,94,0.12)"
+                              : "rgba(248,113,113,0.12)",
+                            color: user.isApproved ? "#4ade80" : "#f87171",
+                            border: `1px solid ${user.isApproved ? "rgba(34,197,94,0.25)" : "rgba(248,113,113,0.25)"}`,
+                          }}
+                        >
+                          {user.isApproved ? "Approved" : "Pending"}
                         </span>
                       </td>
 

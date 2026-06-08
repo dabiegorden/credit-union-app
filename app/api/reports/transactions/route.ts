@@ -17,6 +17,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import SavingsTransaction from "@/models/Savingstransaction";
 import SavingsAccount from "@/models/Savingsaccount";
+import ApprovalRequest from "@/models/ApprovalRequest";
 import { authMiddleware } from "@/middleware/Authmiddleware";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -44,6 +45,32 @@ export async function GET(request: NextRequest) {
     const accountType = searchParams.get("accountType") || "";
     const clientIdStr = searchParams.get("clientId") || "";
     const isExport = searchParams.get("export") === "1";
+
+    // Staff must have an admin-approved, unused export request before they
+    // can download/print transaction reports.
+    if (isExport && auth.user?.role === "staff") {
+      const approval = await ApprovalRequest.findOne({
+        requestedBy: auth.user.userId,
+        action: "report_export",
+        status: "approved",
+        used: false,
+        "payload.reportType": "transactions",
+      }).sort({ reviewedAt: -1 });
+
+      if (!approval) {
+        return NextResponse.json(
+          {
+            error:
+              "Printing/exporting reports requires admin approval. Please submit a request and wait for it to be approved.",
+            requiresApproval: true,
+          },
+          { status: 403 },
+        );
+      }
+
+      approval.used = true;
+      await approval.save();
+    }
 
     /* ── Base match ── */
     const match: Record<string, unknown> = {
