@@ -11,6 +11,8 @@ import {
   IdCard,
   UserRound,
   CheckCircle2,
+  XCircle,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -62,6 +64,9 @@ export function ClientApprovalsView() {
   const [clients, setClients] = useState<PendingClient[]>([]);
   const [loading, setLoading] = useState(true);
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
+  const [declineTarget, setDeclineTarget] = useState<PendingClient | null>(null);
+  const [declineReason, setDeclineReason] = useState("");
+  const [declining, setDeclining] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -83,24 +88,55 @@ export function ClientApprovalsView() {
     load();
   }, [load]);
 
-  async function verify(id: string) {
+  async function approve(id: string) {
     setVerifyingId(id);
     try {
       const res = await fetch(`/api/clients/${id}/verify`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         credentials: "include",
+        body: JSON.stringify({ decision: "approve" }),
       });
       const data = await res.json();
       if (!res.ok) {
         toast.error(data.error ?? "Verification failed");
         return;
       }
-      toast.success("Member verified & activated");
+      toast.success("Member approved & activated");
       setClients((prev) => prev.filter((c) => c._id !== id));
     } catch {
       toast.error("Network error");
     } finally {
       setVerifyingId(null);
+    }
+  }
+
+  async function confirmDecline() {
+    if (!declineTarget) return;
+    setDeclining(true);
+    try {
+      const res = await fetch(`/api/clients/${declineTarget._id}/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          decision: "decline",
+          reason: declineReason.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Failed to decline");
+        return;
+      }
+      toast.success("Registration declined — the member has been notified");
+      setClients((prev) => prev.filter((c) => c._id !== declineTarget._id));
+      setDeclineTarget(null);
+      setDeclineReason("");
+    } catch {
+      toast.error("Network error");
+    } finally {
+      setDeclining(false);
     }
   }
 
@@ -186,17 +222,107 @@ export function ClientApprovalsView() {
                 </div>
               )}
 
-              <button
-                onClick={() => verify(c._id)}
-                disabled={verifyingId === c._id}
-                className="w-full py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60"
-                style={{ background: "rgba(34,197,94,0.15)", color: "#4ade80", border: "1px solid rgba(34,197,94,0.35)" }}
-              >
-                {verifyingId === c._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
-                Verify &amp; Activate Member
-              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => approve(c._id)}
+                  disabled={verifyingId === c._id || declining}
+                  className="py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60"
+                  style={{ background: "rgba(34,197,94,0.15)", color: "#4ade80", border: "1px solid rgba(34,197,94,0.35)" }}
+                >
+                  {verifyingId === c._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                  Approve
+                </button>
+                <button
+                  onClick={() => {
+                    setDeclineTarget(c);
+                    setDeclineReason("");
+                  }}
+                  disabled={verifyingId === c._id || declining}
+                  className="py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60"
+                  style={{ background: "rgba(239,68,68,0.12)", color: "#f87171", border: "1px solid rgba(239,68,68,0.32)" }}
+                >
+                  <XCircle className="w-4 h-4" /> Decline
+                </button>
+              </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Decline modal */}
+      {declineTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(7,17,34,0.82)", backdropFilter: "blur(8px)" }}
+          onClick={(e) => e.target === e.currentTarget && setDeclineTarget(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl overflow-hidden"
+            style={{ background: "#0e1f3d", border: "1px solid rgba(239,68,68,0.3)" }}
+          >
+            <div
+              className="flex items-center justify-between px-6 py-5"
+              style={{ borderBottom: "1px solid rgba(239,68,68,0.15)" }}
+            >
+              <div className="flex items-center gap-2.5">
+                <XCircle className="w-5 h-5 text-red-400" />
+                <h2 className="font-serif font-black text-white text-lg">
+                  Decline Registration
+                </h2>
+              </div>
+              <button
+                onClick={() => setDeclineTarget(null)}
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.4)" }}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="px-6 py-6 space-y-4">
+              <p className="text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
+                Decline the registration for{" "}
+                <span className="font-bold text-white">
+                  {declineTarget.firstName} {declineTarget.lastName}
+                </span>
+                . They will be notified by email with the reason below.
+              </p>
+              <div>
+                <label
+                  className="block text-[10px] font-black uppercase tracking-widest mb-2"
+                  style={{ color: "rgba(228,184,106,0.55)" }}
+                >
+                  Reason (optional)
+                </label>
+                <textarea
+                  rows={3}
+                  value={declineReason}
+                  onChange={(e) => setDeclineReason(e.target.value)}
+                  placeholder="e.g. Ghana card image is not clear / details do not match"
+                  className="w-full rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/25 outline-none resize-none"
+                  style={{ background: "rgba(11,29,58,0.7)", border: "1px solid rgba(239,68,68,0.25)" }}
+                />
+              </div>
+              <div className="flex gap-3 pt-1">
+                <button
+                  onClick={() => setDeclineTarget(null)}
+                  disabled={declining}
+                  className="flex-1 py-3 rounded-xl text-sm font-semibold"
+                  style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)", border: "1px solid rgba(255,255,255,0.1)" }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDecline}
+                  disabled={declining}
+                  className="flex-1 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60"
+                  style={{ background: "rgba(239,68,68,0.85)", color: "white" }}
+                >
+                  {declining ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+                  Confirm Decline
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
