@@ -78,6 +78,11 @@ export const menuItems = [
         url: "/admin-dashboard/clients",
         icon: Users2,
       },
+      {
+        title: "Client Approvals",
+        url: "/admin-dashboard/client-approvals",
+        icon: ShieldCheck,
+      },
     ],
   },
 

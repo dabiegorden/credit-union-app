@@ -65,6 +65,10 @@ const UserSchema = new Schema<IUser>(
       enum: ["admin", "staff", "client"],
       default: "staff",
     },
+    // Position/title for staff. Not enforced at the schema level so that
+    // updating unrelated fields (e.g. approving an older staff account that
+    // predates this field) never fails validation. The create UI still
+    // requires a position to be chosen.
     staffRole: {
       type: String,
       enum: [
@@ -75,9 +79,6 @@ const UserSchema = new Schema<IUser>(
         "manager",
         "susu_collector",
       ],
-      required: function (this: { role?: string }) {
-        return this.role === "staff";
-      },
     },
     // Staff/admin accounts must be approved by an admin before they can log in.
     // Existing admin accounts created before this field was added are treated as approved.

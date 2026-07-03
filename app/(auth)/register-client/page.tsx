@@ -377,9 +377,9 @@ export default function ClientSelfRegisterPage() {
             </button>
 
             <p className="text-center text-sm text-white/35 pt-1">
-              Registering as staff or admin?{" "}
-              <Link href="/register" className="text-[#E4B86A] font-semibold">
-                Use the staff console
+              Already have an account?{" "}
+              <Link href="/login" className="text-[#E4B86A] font-semibold">
+                Sign in
               </Link>
             </p>
           </form>

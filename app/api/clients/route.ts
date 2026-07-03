@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search")?.trim() || "";
     const status = searchParams.get("status") || "";
+    const verificationStatus = searchParams.get("verificationStatus") || "";
     const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
     const limit = Math.min(
       100,
@@ -39,6 +40,7 @@ export async function GET(request: NextRequest) {
 
     const query: Record<string, unknown> = {};
     if (status) query.status = status;
+    if (verificationStatus) query.verificationStatus = verificationStatus;
     if (search) {
       query.$or = [
         { firstName: { $regex: search, $options: "i" } },
@@ -113,8 +115,10 @@ export async function POST(request: NextRequest) {
       ...data,
       dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
       openedBy: auth.user!.userId,
-      // New clients are inactive until an admin authorizes portal access
-      status: "inactive",
+      // Registered in person by staff/admin, so already verified and active.
+      status: "active",
+      verificationStatus: "verified",
+      selfRegistered: false,
     });
 
     try {
@@ -124,7 +128,7 @@ export async function POST(request: NextRequest) {
         email: client.email,
         password: data.password,
         portalType: "client",
-        pendingApproval: true,
+        pendingApproval: false,
       });
     } catch (emailErr) {
       console.error("[POST /api/clients] welcome email failed:", emailErr);

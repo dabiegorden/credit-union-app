@@ -42,6 +42,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import Link from "next/link";
 
 interface UserRecord {
   _id: string;
@@ -610,19 +611,32 @@ export default function StaffAccountsPage() {
             Manage staff login accounts for the admin portal
           </p>
         </div>
-        <Button
-          onClick={() => {
-            setEditUser(null);
-            setFormOpen(true);
-          }}
-          className="rounded-xl font-bold px-5 gap-2 shrink-0"
-          style={{
-            background: "linear-gradient(135deg,#C8963E,#E4B86A)",
-            color: "#0B1D3A",
-          }}
-        >
-          <UserPlus className="w-4 h-4" /> Add Staff
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <Link
+            href="/admin-dashboard/clients"
+            className="rounded-xl font-bold px-5 h-10 flex items-center gap-2 text-sm"
+            style={{
+              background: "rgba(200,150,62,0.12)",
+              border: "1px solid rgba(200,150,62,0.3)",
+              color: "#E4B86A",
+            }}
+          >
+            <Users className="w-4 h-4" /> Register Client
+          </Link>
+          <Button
+            onClick={() => {
+              setEditUser(null);
+              setFormOpen(true);
+            }}
+            className="rounded-xl font-bold px-5 gap-2"
+            style={{
+              background: "linear-gradient(135deg,#C8963E,#E4B86A)",
+              color: "#0B1D3A",
+            }}
+          >
+            <UserPlus className="w-4 h-4" /> Add Staff
+          </Button>
+        </div>
       </div>
 
       {/* ── Stat Cards ── */}

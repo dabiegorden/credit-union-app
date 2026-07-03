@@ -23,6 +23,7 @@ import {
   FileText,
   Users2Icon,
   Activity,
+  ShieldCheck,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -71,6 +72,11 @@ export const staffMenuItems = [
         title: "Clients Management",
         url: "/staff-dashboard/clients",
         icon: Users2,
+      },
+      {
+        title: "Client Approvals",
+        url: "/staff-dashboard/client-approvals",
+        icon: ShieldCheck,
       },
     ],
   },
