@@ -50,6 +50,7 @@ export interface UserProfile {
   name: string;
   email: string;
   role: "admin" | "staff" | "client";
+  staffRole?: string | null;
 }
 
 interface AdminSidebarProps {
@@ -125,6 +126,22 @@ export const menuItems = [
         title: "Loan Reports",
         url: "/admin-dashboard/reports-loans",
         icon: FileText,
+      },
+    ],
+  },
+
+  {
+    title: "Credit Union",
+    items: [
+      {
+        title: "General Account",
+        url: "/admin-dashboard/general-account",
+        icon: Landmark,
+      },
+      {
+        title: "Staff Activity",
+        url: "/admin-dashboard/activity",
+        icon: ClipboardList,
       },
     ],
   },

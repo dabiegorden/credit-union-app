@@ -91,12 +91,12 @@ interface ReportData {
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 function fmt(n: number) {
-  return `GHS${(n || 0).toLocaleString("en-GH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `₵${(n || 0).toLocaleString("en-GH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 function fmtShort(n: number) {
-  if (n >= 1_000_000) return `GHS${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `GHS${(n / 1_000).toFixed(1)}K`;
-  return `GHS${n.toFixed(0)}`;
+  if (n >= 1_000_000) return `₵${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `₵${(n / 1_000).toFixed(1)}K`;
+  return `₵${n.toFixed(0)}`;
 }
 
 const COLORS = {

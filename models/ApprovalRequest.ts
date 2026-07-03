@@ -3,7 +3,8 @@ import mongoose, { Schema, Document } from "mongoose";
 export type ApprovalAction =
   | "client_edit"
   | "client_delete"
-  | "report_export";
+  | "report_export"
+  | "statement_print";
 
 export type ApprovalStatus = "pending" | "approved" | "rejected";
 
@@ -30,7 +31,7 @@ const ApprovalRequestSchema = new Schema<IApprovalRequest>(
   {
     action: {
       type: String,
-      enum: ["client_edit", "client_delete", "report_export"],
+      enum: ["client_edit", "client_delete", "report_export", "statement_print"],
       required: true,
     },
     status: {

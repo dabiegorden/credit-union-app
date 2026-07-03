@@ -12,13 +12,19 @@ export interface IClient extends Document {
   dateOfBirth?: Date;
   photo?: string;
   occupation?: string;
+  // Ghana card verification & self-registration artefacts
+  ghanaCardFront?: string; // uploaded image URL / data URI
+  ghanaCardBack?: string;
+  signature?: string; // signature image captured at registration
+  verificationStatus: "pending" | "verified" | "rejected";
+  selfRegistered: boolean;
   status: "active" | "inactive" | "suspended";
   savingsBalance: number; // denormalized total across all accounts
   // Login credentials (client portal)
   password: string;
   lastLogin?: Date;
   // Metadata
-  openedBy: mongoose.Types.ObjectId; // staff/admin who registered them
+  openedBy?: mongoose.Types.ObjectId; // staff/admin who registered them (absent for self-registration)
   createdAt: Date;
   updatedAt: Date;
   comparePassword(password: string): Promise<boolean>;
@@ -42,6 +48,15 @@ const ClientSchema = new Schema<IClient>(
     dateOfBirth: { type: Date },
     photo: { type: String, default: null },
     occupation: { type: String, trim: true },
+    ghanaCardFront: { type: String, default: null },
+    ghanaCardBack: { type: String, default: null },
+    signature: { type: String, default: null },
+    verificationStatus: {
+      type: String,
+      enum: ["pending", "verified", "rejected"],
+      default: "verified",
+    },
+    selfRegistered: { type: Boolean, default: false },
     status: {
       type: String,
       enum: ["active", "inactive", "suspended"],
@@ -58,7 +73,7 @@ const ClientSchema = new Schema<IClient>(
     openedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      // Not required: clients who self-register have no staff opener until verified
     },
   },
   { timestamps: true },

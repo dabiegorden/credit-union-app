@@ -38,6 +38,7 @@ import {
   Lock,
   Mail,
   User,
+  CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -47,10 +48,24 @@ interface UserRecord {
   name: string;
   email: string;
   role: "admin" | "staff" | "client";
+  staffRole?: string | null;
   isApproved?: boolean;
   createdAt: string;
   updatedAt: string;
 }
+
+const STAFF_ROLE_OPTIONS: { value: string; label: string }[] = [
+  { value: "teller_1", label: "Teller 1" },
+  { value: "teller_2", label: "Teller 2" },
+  { value: "loan_manager", label: "Loan Manager" },
+  { value: "operation_manager", label: "Operation Manager" },
+  { value: "manager", label: "Manager" },
+  { value: "susu_collector", label: "Susu Collector" },
+];
+
+const STAFF_ROLE_LABELS: Record<string, string> = Object.fromEntries(
+  STAFF_ROLE_OPTIONS.map((o) => [o.value, o.label]),
+);
 
 interface Pagination {
   total: number;
@@ -140,6 +155,7 @@ function UserFormModal({ open, onClose, onSuccess, editUser }: FormModalProps) {
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [isApproved, setIsApproved] = useState(false);
+  const [staffRole, setStaffRole] = useState("");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -149,6 +165,7 @@ function UserFormModal({ open, onClose, onSuccess, editUser }: FormModalProps) {
       setEmail(editUser?.email ?? "");
       setPassword("");
       setIsApproved(editUser?.isApproved ?? false);
+      setStaffRole(editUser?.staffRole ?? "");
       setErrors({});
       setShowPw(false);
     }
@@ -158,6 +175,7 @@ function UserFormModal({ open, onClose, onSuccess, editUser }: FormModalProps) {
     const e: Record<string, string> = {};
     if (!name.trim()) e.name = "Name is required";
     if (!email.trim()) e.email = "Email is required";
+    if (!staffRole) e.staffRole = "Select a staff position";
     if (!isEdit && !password) e.password = "Password is required";
     else if (password && password.length < 6)
       e.password = "Minimum 6 characters";
@@ -173,6 +191,7 @@ function UserFormModal({ open, onClose, onSuccess, editUser }: FormModalProps) {
         name,
         email,
         role: "staff",
+        staffRole,
       };
       if (password) payload.password = password;
       if (isEdit) payload.isApproved = isApproved;
@@ -340,14 +359,24 @@ function UserFormModal({ open, onClose, onSuccess, editUser }: FormModalProps) {
 
             <div className="space-y-1.5">
               <Label className="text-white/60 text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5">
-                <Shield className="w-3 h-3 text-[#C8963E]" /> Role
+                <Shield className="w-3 h-3 text-[#C8963E]" /> Staff Position
               </Label>
-              <div
-                className="h-11 rounded-xl bg-[#0B1D3A] border border-[#C8963E]/20 flex items-center px-4"
-                style={{ color: "#60a5fa" }}
+              <select
+                value={staffRole}
+                onChange={(e) => setStaffRole(e.target.value)}
+                className="w-full h-11 rounded-xl bg-[#0B1D3A] border border-[#C8963E]/20 text-white text-sm px-4 outline-none focus:border-[#C8963E]/55"
+                style={{ colorScheme: "dark" }}
               >
-                Staff
-              </div>
+                <option value="">Select position…</option>
+                {STAFF_ROLE_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+              {errors.staffRole && (
+                <p className="text-red-400 text-xs">{errors.staffRole}</p>
+              )}
             </div>
           </div>
 
@@ -418,8 +447,8 @@ function DeleteModal({
             </div>
             <AlertDialogDescription className="text-white/40 text-sm">
               Permanently delete{" "}
-              <span className="text-white font-semibold">{user?.name}</span>'s
-              account. This cannot be undone.
+              <span className="text-white font-semibold">{user?.name}</span>
+              &apos;s account. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="mt-5 gap-2">
@@ -515,6 +544,25 @@ export default function StaffAccountsPage() {
         prev.map((u) => (u._id === user._id ? { ...u, ...user } : u)),
       );
     else fetchUsers(1, search, roleFilter);
+  };
+
+  const handleApprove = async (user: UserRecord) => {
+    try {
+      const res = await fetch(`/api/users/${user._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ isApproved: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      toast.success(`${user.name} approved — they can now sign in`);
+      setUsers((prev) =>
+        prev.map((u) => (u._id === user._id ? { ...u, isApproved: true } : u)),
+      );
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to approve");
+    }
   };
 
   const handleDelete = async () => {
@@ -783,16 +831,23 @@ export default function StaffAccountsPage() {
 
                       {/* Role */}
                       <td className="px-5 py-3.5">
-                        <span
-                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider"
-                          style={{
-                            background: rc.bg,
-                            color: rc.text,
-                            border: `1px solid ${rc.border}`,
-                          }}
-                        >
-                          {user.role}
-                        </span>
+                        <div className="flex flex-col gap-1 items-start">
+                          <span
+                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider"
+                            style={{
+                              background: rc.bg,
+                              color: rc.text,
+                              border: `1px solid ${rc.border}`,
+                            }}
+                          >
+                            {user.role}
+                          </span>
+                          {user.staffRole && (
+                            <span className="text-[11px] text-white/45 font-medium">
+                              {STAFF_ROLE_LABELS[user.staffRole] ?? user.staffRole}
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       {/* Status */}
@@ -821,6 +876,14 @@ export default function StaffAccountsPage() {
                       {/* ── Actions — always visible ── */}
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-2 justify-end">
+                          {!user.isApproved && (
+                            <ActionBtn
+                              icon={CheckCircle2}
+                              label="Approve"
+                              color="#4ade80"
+                              onClick={() => handleApprove(user)}
+                            />
+                          )}
                           <ActionBtn
                             icon={Pencil}
                             label="Edit"

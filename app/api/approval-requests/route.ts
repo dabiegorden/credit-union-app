@@ -5,7 +5,7 @@ import { authMiddleware } from "@/middleware/Authmiddleware";
 import { z } from "zod";
 
 const createSchema = z.object({
-  action: z.enum(["client_edit", "client_delete", "report_export"]),
+  action: z.enum(["client_edit", "client_delete", "report_export", "statement_print"]),
   targetId: z.string().optional(),
   targetLabel: z.string().optional(),
   payload: z.record(z.string(), z.unknown()).optional(),

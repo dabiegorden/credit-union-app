@@ -56,7 +56,7 @@ export async function PUT(
     await connectDB();
 
     const body = await request.json();
-    const { name, email, role, password, isApproved } = body;
+    const { name, email, role, password, isApproved, staffRole } = body;
 
     // Use select("+password") so the pre-save hash hook works correctly
     const user = await User.findById(id).select("+password");
@@ -96,6 +96,7 @@ export async function PUT(
     if (name?.trim()) user.name = name.trim();
     if (email?.trim()) user.email = email.toLowerCase().trim();
     if (role) user.role = role;
+    if (staffRole) user.staffRole = staffRole;
     if (typeof isApproved === "boolean") user.isApproved = isApproved;
     if (password) {
       if (password.length < 6) {
@@ -117,6 +118,7 @@ export async function PUT(
         name: user.name,
         email: user.email,
         role: user.role,
+        staffRole: user.staffRole,
         isApproved: user.isApproved,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,

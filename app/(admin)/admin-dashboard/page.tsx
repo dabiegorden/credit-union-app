@@ -154,12 +154,12 @@ interface DashboardData {
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 function fmt(n: number) {
-  return `GHS${(n || 0).toLocaleString("en-GH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `₵${(n || 0).toLocaleString("en-GH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 function fmtShort(n: number) {
-  if (n >= 1_000_000) return `GHS${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `GHS${(n / 1_000).toFixed(1)}K`;
-  return `GHS${n.toFixed(0)}`;
+  if (n >= 1_000_000) return `₵${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `₵${(n / 1_000).toFixed(1)}K`;
+  return `₵${n.toFixed(0)}`;
 }
 function initials(name: string) {
   return name
@@ -714,7 +714,7 @@ export default function AdminDashboard() {
         <KpiCard
           label="Active Loans"
           value={loans.active.toLocaleString()}
-          sub={`GHS${(loans.totalOutstanding / 1000).toFixed(0)}K outstanding`}
+          sub={`₵${(loans.totalOutstanding / 1000).toFixed(0)}K outstanding`}
           icon={CreditCard}
           gradient="linear-gradient(135deg,#C8963E,#E4B86A)"
           spark={sparklineLoans}
@@ -725,7 +725,7 @@ export default function AdminDashboard() {
         <KpiCard
           label="Overdue Loans"
           value={loans.overdue.toLocaleString()}
-          sub={`GHS${(loans.totalPenalties / 1000).toFixed(1)}K penalties`}
+          sub={`₵${(loans.totalPenalties / 1000).toFixed(1)}K penalties`}
           icon={AlertTriangle}
           gradient={
             loans.overdue > 0

@@ -14,6 +14,8 @@ import Client from "@/models/Client";
 import SavingsAccount from "@/models/Savingsaccount";
 import SavingsTransaction from "@/models/Savingstransaction";
 import { authMiddleware } from "@/middleware/Authmiddleware";
+import ApprovalRequest from "@/models/ApprovalRequest";
+import { logActivity } from "@/lib/activity";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
 export async function GET(
@@ -30,6 +32,27 @@ export async function GET(
     // Clients can only generate their own statement
     if (auth.user?.role === "client" && auth.user.userId !== id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // Staff may only print a statement with an approved (unused) admin approval.
+    let staffApproval: { _id: unknown } | null = null;
+    if (auth.user?.role === "staff") {
+      staffApproval = await ApprovalRequest.findOne({
+        action: "statement_print",
+        status: "approved",
+        used: false,
+        requestedBy: auth.user.userId,
+        targetId: id,
+      });
+      if (!staffApproval) {
+        return NextResponse.json(
+          {
+            error:
+              "Printing a statement requires admin approval. Please submit an approval request first.",
+          },
+          { status: 403 },
+        );
+      }
     }
 
     const client = await Client.findById(id).select("-password").lean();
@@ -364,6 +387,20 @@ export async function GET(
     const pdfBytes = await pdfDoc.save();
     const pdfBuffer = Buffer.from(pdfBytes);
     const filename = `statement-${(client as any).clientId}-${fromDate.toISOString().split("T")[0]}.pdf`;
+
+    // Consume the staff approval (single-use) and log the print activity
+    if (auth.user?.role === "staff" && staffApproval) {
+      await ApprovalRequest.findByIdAndUpdate(staffApproval._id, { used: true });
+    }
+    if (auth.user?.role !== "client") {
+      await logActivity({
+        staff: auth.user!.userId,
+        action: "statement_print",
+        targetClient: id,
+        targetLabel: `${(client as any).firstName} ${(client as any).lastName}`,
+        description: "Printed statement of account",
+      });
+    }
 
     return new NextResponse(pdfBuffer, {
       status: 200,

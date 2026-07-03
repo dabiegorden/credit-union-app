@@ -131,7 +131,7 @@ const STATUS_META = {
 };
 
 function fmt(n: number) {
-  return `GHS${n.toLocaleString("en-GH", {
+  return `₵${n.toLocaleString("en-GH", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;

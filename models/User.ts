@@ -1,11 +1,39 @@
 import mongoose, { Schema, Document } from "mongoose";
 import bcrypt from "bcryptjs";
 
+export type StaffRole =
+  | "teller_1"
+  | "teller_2"
+  | "loan_manager"
+  | "operation_manager"
+  | "manager"
+  | "susu_collector";
+
+export const STAFF_ROLES: StaffRole[] = [
+  "teller_1",
+  "teller_2",
+  "loan_manager",
+  "operation_manager",
+  "manager",
+  "susu_collector",
+];
+
+export const STAFF_ROLE_LABELS: Record<StaffRole, string> = {
+  teller_1: "Teller 1",
+  teller_2: "Teller 2",
+  loan_manager: "Loan Manager",
+  operation_manager: "Operation Manager",
+  manager: "Manager",
+  susu_collector: "Susu Collector",
+};
+
 export interface IUser extends Document {
   name: string;
   email: string;
   password: string;
   role: "admin" | "staff" | "client";
+  // Job title / position for staff accounts (Teller 1, Loan Manager, etc.)
+  staffRole?: StaffRole;
   isApproved: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -36,6 +64,20 @@ const UserSchema = new Schema<IUser>(
       type: String,
       enum: ["admin", "staff", "client"],
       default: "staff",
+    },
+    staffRole: {
+      type: String,
+      enum: [
+        "teller_1",
+        "teller_2",
+        "loan_manager",
+        "operation_manager",
+        "manager",
+        "susu_collector",
+      ],
+      required: function (this: { role?: string }) {
+        return this.role === "staff";
+      },
     },
     // Staff/admin accounts must be approved by an admin before they can log in.
     // Existing admin accounts created before this field was added are treated as approved.

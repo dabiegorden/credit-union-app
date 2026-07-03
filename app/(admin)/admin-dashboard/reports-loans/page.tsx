@@ -112,12 +112,12 @@ interface ReportData {
 
 /* ─── Helpers ────────────────────────────────────────────────────────────── */
 function fmt(n: number) {
-  return `GHS${(n || 0).toLocaleString("en-GH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `₵${(n || 0).toLocaleString("en-GH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 function fmtShort(n: number) {
-  if (n >= 1_000_000) return `GHS${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `GHS${(n / 1_000).toFixed(1)}K`;
-  return `GHS${n.toFixed(0)}`;
+  if (n >= 1_000_000) return `₵${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `₵${(n / 1_000).toFixed(1)}K`;
+  return `₵${n.toFixed(0)}`;
 }
 function round2(n: number) {
   return Math.round((n || 0) * 100) / 100;
@@ -410,27 +410,27 @@ export default function LoanReportPage() {
           {
             Metric: "Total Amount Applied",
             Value: round2(kpis.totalAmountApplied),
-            Unit: "GHS",
+            Unit: "₵",
           },
           {
             Metric: "Total Disbursed",
             Value: round2(kpis.totalAmountDisbursed),
-            Unit: "GHS",
+            Unit: "₵",
           },
           {
             Metric: "Total Outstanding",
             Value: round2(kpis.totalOutstanding),
-            Unit: "GHS",
+            Unit: "₵",
           },
           {
             Metric: "Total Amount Paid",
             Value: round2(kpis.totalPaid),
-            Unit: "GHS",
+            Unit: "₵",
           },
           {
             Metric: "Total Penalties",
             Value: round2(kpis.totalPenalties),
-            Unit: "GHS",
+            Unit: "₵",
           },
           { Metric: "Active Loans", Value: kpis.activeCount, Unit: "count" },
           { Metric: "Overdue Loans", Value: kpis.overdueCount, Unit: "count" },
@@ -448,7 +448,7 @@ export default function LoanReportPage() {
           {
             Metric: "Avg Loan Amount",
             Value: round2(kpis.avgLoanAmount),
-            Unit: "GHS",
+            Unit: "₵",
           },
           {
             Metric: "Avg Interest Rate",
@@ -469,22 +469,22 @@ export default function LoanReportPage() {
           {
             Metric: "Total Collected",
             Value: round2(rk.totalCollected),
-            Unit: "GHS",
+            Unit: "₵",
           },
           {
             Metric: "Principal Collected",
             Value: round2(rk.totalPrincipal),
-            Unit: "GHS",
+            Unit: "₵",
           },
           {
             Metric: "Interest Collected",
             Value: round2(rk.totalInterest),
-            Unit: "GHS",
+            Unit: "₵",
           },
           {
             Metric: "Penalty Collected",
             Value: round2(rk.totalPenalty),
-            Unit: "GHS",
+            Unit: "₵",
           },
           {
             Metric: "Repayment Count",

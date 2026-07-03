@@ -62,7 +62,7 @@ const PURPOSE_OPTIONS: { value: LoanPurpose; label: string; emoji: string }[] =
 
 /* ─── Helpers ── */
 function fmt(n: number) {
-  return `GHS${n.toLocaleString("en-GH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `₵${n.toLocaleString("en-GH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 const inputCls =
@@ -204,7 +204,7 @@ export default function LoanApplyPage() {
     const amount = parseFloat(loanAmount);
     const months = parseInt(duration);
     if (isNaN(amount) || amount < 100) {
-      setSubmitError("Minimum loan amount is GHS 100.");
+      setSubmitError("Minimum loan amount is ₵ 100.");
       return;
     }
     if (isNaN(months) || months < 1 || months > 60) {
@@ -463,7 +463,7 @@ export default function LoanApplyPage() {
               Loan Details
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="Loan Amount (GHS)" required>
+              <Field label="Loan Amount (₵)" required>
                 <div className="relative">
                   <DollarSign
                     className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"

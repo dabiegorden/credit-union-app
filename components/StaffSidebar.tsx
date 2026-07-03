@@ -22,6 +22,7 @@ import {
   Users2,
   FileText,
   Users2Icon,
+  Activity,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -40,7 +41,17 @@ export interface UserProfile {
   name: string;
   email: string;
   role: "admin" | "staff" | "client";
+  staffRole?: string | null;
 }
+
+const STAFF_ROLE_LABELS: Record<string, string> = {
+  teller_1: "Teller 1",
+  teller_2: "Teller 2",
+  loan_manager: "Loan Manager",
+  operation_manager: "Operation Manager",
+  manager: "Manager",
+  susu_collector: "Susu Collector",
+};
 
 interface StaffSidebarProps {
   user: UserProfile;
@@ -100,6 +111,11 @@ export const staffMenuItems = [
         title: "Loan Reports",
         url: "/staff-dashboard/reports-loans",
         icon: FileText,
+      },
+      {
+        title: "My Activity",
+        url: "/staff-dashboard/activity",
+        icon: Activity,
       },
     ],
   },
@@ -341,7 +357,9 @@ export function StaffSidebar({ user, onLogout }: StaffSidebarProps) {
                           color: "#E4B86A",
                         }}
                       >
-                        {roleLabel[user.role]}
+                        {user.staffRole
+                          ? STAFF_ROLE_LABELS[user.staffRole] ?? roleLabel[user.role]
+                          : roleLabel[user.role]}
                       </span>
                     </div>
                   </div>

@@ -511,7 +511,7 @@ export default function ClientsPage() {
                       className="text-sm font-bold"
                       style={{ color: "#E4B86A" }}
                     >
-                      GHS
+                      ₵
                       {c.savingsBalance.toLocaleString("en-GH", {
                         minimumFractionDigits: 2,
                       })}
@@ -827,7 +827,7 @@ export default function ClientsPage() {
                 <DetailRow
                   icon={TrendingUp}
                   label="Savings Balance"
-                  value={`GHS${selected.savingsBalance.toLocaleString("en-GH", { minimumFractionDigits: 2 })}`}
+                  value={`₵${selected.savingsBalance.toLocaleString("en-GH", { minimumFractionDigits: 2 })}`}
                   highlight
                 />
                 <DetailRow

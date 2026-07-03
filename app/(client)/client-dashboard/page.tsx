@@ -87,7 +87,7 @@ const ACCT_META = {
 };
 
 function fmt(n: number) {
-  return `GHS${n.toLocaleString("en-GH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `₵${n.toLocaleString("en-GH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 const inputStyle: React.CSSProperties = {

@@ -94,7 +94,7 @@ type PayMethod =
 
 /* ─── Helpers ── */
 function fmt(n: number) {
-  return `GHS${n.toLocaleString("en-GH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `₵${n.toLocaleString("en-GH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 const METHOD_META: Record<
@@ -493,7 +493,7 @@ function RepayModal({
               </div>
 
               {/* Amount */}
-              <Field label="Amount to Pay (GHS)" required>
+              <Field label="Amount to Pay (₵)" required>
                 <div className="relative">
                   <DollarSign
                     className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"

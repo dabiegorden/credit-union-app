@@ -21,6 +21,7 @@ import {
   UserCheck,
   UserX,
   CreditCard as CardIcon,
+  ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -41,6 +42,11 @@ interface Client {
   createdAt: string;
   status: "active" | "inactive" | "suspended";
   savingsBalance: number;
+  verificationStatus?: "pending" | "verified" | "rejected";
+  selfRegistered?: boolean;
+  ghanaCardFront?: string | null;
+  ghanaCardBack?: string | null;
+  signature?: string | null;
 }
 
 type ModalMode = "add" | "edit" | "view" | null;
@@ -94,6 +100,7 @@ export default function ClientsPage() {
   const [formLoading, setFormLoading] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [verifyLoadingId, setVerifyLoadingId] = useState<string | null>(null);
   const [pagination, setPagination] = useState({
     total: 0,
     page: 1,
@@ -207,6 +214,32 @@ export default function ClientsPage() {
       toast.error("Network error");
     } finally {
       setFormLoading(false);
+    }
+  };
+
+  const handleVerify = async (id: string) => {
+    setVerifyLoadingId(id);
+    try {
+      const res = await fetch(`/api/clients/${id}/verify`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Verification failed");
+        return;
+      }
+      toast.success("Client verified & activated");
+      setSelected((prev) =>
+        prev && prev._id === id
+          ? { ...prev, verificationStatus: "verified", status: "active" }
+          : prev,
+      );
+      fetchClients(pagination.page);
+    } catch {
+      toast.error("Network error");
+    } finally {
+      setVerifyLoadingId(null);
     }
   };
 
@@ -467,7 +500,7 @@ export default function ClientsPage() {
                       className="text-sm font-bold"
                       style={{ color: "#E4B86A" }}
                     >
-                      GHS
+                      ₵
                       {c.savingsBalance.toLocaleString("en-GH", {
                         minimumFractionDigits: 2,
                       })}
@@ -490,6 +523,14 @@ export default function ClientsPage() {
                     {sm.label}
                   </span>
                   <div className="flex items-center gap-1 justify-end">
+                    {c.verificationStatus === "pending" && (
+                      <ActionBtn
+                        icon={ShieldCheck}
+                        title="Verify & activate"
+                        color="#4ade80"
+                        onClick={() => handleVerify(c._id)}
+                      />
+                    )}
                     <ActionBtn
                       icon={Eye}
                       title="View"
@@ -755,7 +796,7 @@ export default function ClientsPage() {
                 <DetailRow
                   icon={TrendingUp}
                   label="Savings Balance"
-                  value={`GHS${selected.savingsBalance.toLocaleString("en-GH", { minimumFractionDigits: 2 })}`}
+                  value={`₵${selected.savingsBalance.toLocaleString("en-GH", { minimumFractionDigits: 2 })}`}
                   highlight
                 />
                 <DetailRow
@@ -766,7 +807,71 @@ export default function ClientsPage() {
                     { day: "numeric", month: "long", year: "numeric" },
                   )}
                 />
+                <DetailRow
+                  icon={ShieldCheck}
+                  label="Verification"
+                  value={
+                    selected.verificationStatus === "verified"
+                      ? "Verified"
+                      : selected.verificationStatus === "rejected"
+                        ? "Rejected"
+                        : selected.selfRegistered
+                          ? "Pending — awaiting office verification"
+                          : "Verified"
+                  }
+                  highlight={selected.verificationStatus === "pending"}
+                />
               </div>
+
+              {/* Ghana card & signature */}
+              {(selected.ghanaCardFront ||
+                selected.ghanaCardBack ||
+                selected.signature) && (
+                <div className="space-y-2">
+                  <p
+                    className="text-[10px] font-black uppercase tracking-wider"
+                    style={{ color: "rgba(228,184,106,0.55)" }}
+                  >
+                    Ghana Card & Signature
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {selected.ghanaCardFront && (
+                      <ImageTile label="Card Front" src={selected.ghanaCardFront} />
+                    )}
+                    {selected.ghanaCardBack && (
+                      <ImageTile label="Card Back" src={selected.ghanaCardBack} />
+                    )}
+                    {selected.signature && (
+                      <ImageTile
+                        label="Signature"
+                        src={selected.signature}
+                        light
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {selected.verificationStatus === "pending" && (
+                <button
+                  onClick={() => handleVerify(selected._id)}
+                  disabled={verifyLoadingId === selected._id}
+                  className="w-full py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-60"
+                  style={{
+                    background: "rgba(34,197,94,0.15)",
+                    color: "#4ade80",
+                    border: "1px solid rgba(34,197,94,0.35)",
+                  }}
+                >
+                  {verifyLoadingId === selected._id ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <ShieldCheck className="w-4 h-4" />
+                  )}
+                  Verify &amp; Activate Member
+                </button>
+              )}
+
               <div className="flex gap-3 pt-2">
                 <button
                   onClick={() => {
@@ -1020,6 +1125,37 @@ function Input({
         e.currentTarget.style.boxShadow = "none";
       }}
     />
+  );
+}
+
+function ImageTile({
+  label,
+  src,
+  light,
+}: {
+  label: string;
+  src: string;
+  light?: boolean;
+}) {
+  return (
+    <a href={src} target="_blank" rel="noopener noreferrer" className="block">
+      <div
+        className="rounded-xl overflow-hidden border h-28 flex items-center justify-center"
+        style={{
+          borderColor: "rgba(200,150,62,0.25)",
+          background: light ? "#ffffff" : "rgba(11,29,58,0.6)",
+        }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={src} alt={label} className="h-full w-full object-contain" />
+      </div>
+      <p
+        className="text-[10px] mt-1 text-center font-semibold"
+        style={{ color: "rgba(255,255,255,0.45)" }}
+      >
+        {label}
+      </p>
+    </a>
   );
 }
 

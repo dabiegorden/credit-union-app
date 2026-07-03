@@ -2084,7 +2084,7 @@ export default function CardIssuancePage() {
                 {
                   icon: CreditCard,
                   label: "Balance",
-                  value: `GHS${(client.savingsBalance || 0).toLocaleString("en-GH", { minimumFractionDigits: 2 })}`,
+                  value: `₵${(client.savingsBalance || 0).toLocaleString("en-GH", { minimumFractionDigits: 2 })}`,
                 },
               ].map(({ icon: Icon, label, value }) => (
                 <div

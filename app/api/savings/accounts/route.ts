@@ -10,6 +10,8 @@ import { authMiddleware } from "@/middleware/Authmiddleware";
 import { z } from "zod";
 import Savingsaccount from "@/models/Savingsaccount";
 import Client from "@/models/Client";
+import { logActivity } from "@/lib/activity";
+import { notify } from "@/lib/notify";
 
 const createAccountSchema = z.object({
   clientId: z.string().min(1, "Client ID is required"),
@@ -157,6 +159,27 @@ export async function POST(request: NextRequest) {
 
     await account.populate("clientId", "clientId firstName lastName email");
     await account.populate("openedBy", "name email role");
+
+    // Record the account-open activity against the staff member
+    await logActivity({
+      staff: auth.user!.userId,
+      action: "account_open",
+      targetClient: clientId,
+      targetLabel: `${client.firstName} ${client.lastName}`,
+      description: `Opened ${account.accountName} (${account.accountNumber})`,
+    });
+
+    // Notify the client their account was opened
+    await notify({
+      recipient: clientId,
+      recipientModel: "Client",
+      type: "account",
+      title: "New savings account opened",
+      message: `A ${account.accountName} account (${account.accountNumber}) has been opened for you.`,
+      email: client.email,
+      emailName: `${client.firstName} ${client.lastName}`,
+      sendEmail: true,
+    });
 
     return NextResponse.json(
       {

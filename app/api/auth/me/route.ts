@@ -54,6 +54,7 @@ export async function GET(request: NextRequest) {
         id: (user as any)._id,
         name: (user as any).name,
         email: (user as any).email,
+        staffRole: (user as any).staffRole ?? null,
       },
     });
   } catch (error) {

@@ -13,6 +13,9 @@ import SavingsAccount from "@/models/Savingsaccount";
 import SavingsTransaction from "@/models/Savingstransaction";
 import Client from "@/models/Client";
 import { authMiddleware } from "@/middleware/Authmiddleware";
+import { notify } from "@/lib/notify";
+import { logActivity, applyToGeneralAccount } from "@/lib/activity";
+import { formatCedis } from "@/lib/currency";
 import { z } from "zod";
 import mongoose from "mongoose";
 
@@ -121,7 +124,7 @@ export async function POST(request: NextRequest) {
     }
 
     // For clients: verify ownership using the resolver
-    let recordedById = auth.user!.userId;
+    const recordedById = auth.user!.userId;
     if (auth.user?.role === "client") {
       const clientDoc = await Client.findById(auth.user.userId);
       if (!clientDoc) {
@@ -150,7 +153,7 @@ export async function POST(request: NextRequest) {
       if (amount > account.balance) {
         return NextResponse.json(
           {
-            error: `Insufficient balance. Current balance: GHS${account.balance.toFixed(2)}`,
+            error: `Insufficient balance. Current balance: ₵${account.balance.toFixed(2)}`,
           },
           { status: 400 },
         );
@@ -158,7 +161,7 @@ export async function POST(request: NextRequest) {
       if (account.balance - amount < MINIMUM_BALANCE) {
         return NextResponse.json(
           {
-            error: `Withdrawal denied. You must maintain a minimum balance of GHS${MINIMUM_BALANCE.toFixed(2)}. Maximum withdrawable amount: GHS${Math.max(account.balance - MINIMUM_BALANCE, 0).toFixed(2)}`,
+            error: `Withdrawal denied. You must maintain a minimum balance of ₵${MINIMUM_BALANCE.toFixed(2)}. Maximum withdrawable amount: ₵${Math.max(account.balance - MINIMUM_BALANCE, 0).toFixed(2)}`,
           },
           { status: 400 },
         );
@@ -174,12 +177,20 @@ export async function POST(request: NextRequest) {
     account.balance = balanceAfter;
     await account.save();
 
-    // Sync Client.savingsBalance
-    await Client.findByIdAndUpdate(account.clientId, {
-      $inc: {
-        savingsBalance: transactionType === "deposit" ? amount : -amount,
+    // Sync Client.savingsBalance and fetch client for notification
+    const clientForNotify = await Client.findByIdAndUpdate(
+      account.clientId,
+      {
+        $inc: {
+          savingsBalance: transactionType === "deposit" ? amount : -amount,
+        },
       },
-    });
+      { new: true },
+    );
+
+    // Mirror the movement in the credit union's pooled general account.
+    // Every deposit/withdrawal must pass through the union's general account.
+    const generalBalance = await applyToGeneralAccount(transactionType, amount);
 
     // Create transaction record
     const transaction = await SavingsTransaction.create({
@@ -199,6 +210,41 @@ export async function POST(request: NextRequest) {
     );
     await transaction.populate("clientId", "clientId firstName lastName email");
     await transaction.populate("recordedBy", "name email role");
+
+    // ── Notify the client of the deposit / withdrawal (in-app + email) ──────
+    if (clientForNotify) {
+      const verb = transactionType === "deposit" ? "deposited into" : "withdrawn from";
+      await notify({
+        recipient: clientForNotify._id.toString(),
+        recipientModel: "Client",
+        type: transactionType,
+        title:
+          transactionType === "deposit"
+            ? "Deposit received"
+            : "Withdrawal processed",
+        message: `${formatCedis(amount)} has been ${verb} your ${account.accountName} account (${account.accountNumber}). New balance: ${formatCedis(balanceAfter)}.`,
+        email: clientForNotify.email,
+        emailName: `${clientForNotify.firstName} ${clientForNotify.lastName}`,
+        sendEmail: true,
+        meta: { accountId: account._id.toString(), amount, balanceAfter },
+      });
+    }
+
+    // ── Log staff activity (deposits/withdrawals recorded by staff/admin) ───
+    if (auth.user?.role !== "client") {
+      await logActivity({
+        staff: auth.user!.userId,
+        action: transactionType,
+        amount,
+        targetClient: account.clientId.toString(),
+        targetLabel: clientForNotify
+          ? `${clientForNotify.firstName} ${clientForNotify.lastName}`
+          : undefined,
+        description: `${transactionType} on ${account.accountNumber}`,
+      });
+    }
+
+    void generalBalance;
 
     return NextResponse.json(
       {

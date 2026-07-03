@@ -121,7 +121,7 @@ const TX_TYPE_META = {
 };
 
 function fmt(n: number) {
-  return `GHS${n.toLocaleString("en-GH", {
+  return `₵${n.toLocaleString("en-GH", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
@@ -1787,7 +1787,7 @@ export default function AdminDepositsPage() {
               {chosenAccount && (
                 <>
                   <div className="grid grid-cols-2 gap-4">
-                    <Field label="Amount (GHS)" required>
+                    <Field label="Amount (₵)" required>
                       <div className="relative">
                         <DollarSign
                           className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
@@ -1879,7 +1879,7 @@ export default function AdminDepositsPage() {
                       }}
                     >
                       {txType === "deposit" ? "+" : "−"}
-                      {amount ? fmt(parseFloat(amount) || 0) : "GHS0.00"}
+                      {amount ? fmt(parseFloat(amount) || 0) : "₵0.00"}
                     </div>
                     <div className="text-right">
                       <p

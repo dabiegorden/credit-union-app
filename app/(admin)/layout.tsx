@@ -25,6 +25,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Bell, LogOut, User, ChevronDown, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { NotificationBell } from "@/components/NotificationBell";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -205,22 +206,7 @@ function DashboardContent({ children }: { children: ReactNode }) {
           {/* ── Header Right ── */}
           <div className="ml-auto flex items-center gap-2 px-4">
             {/* Bell */}
-            <div className="hidden sm:block">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="rounded-lg relative transition-all duration-200"
-                style={{ color: "rgba(255,255,255,0.55)" }}
-              >
-                <Bell className="h-4 w-4" />
-                <span
-                  className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full animate-pulse"
-                  style={{
-                    background: "linear-gradient(135deg,#C8963E,#E4B86A)",
-                  }}
-                />
-              </Button>
-            </div>
+            <NotificationBell />
 
             {/* Name + email (lg only) */}
             <div className="text-right hidden lg:block">
