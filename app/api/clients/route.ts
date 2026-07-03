@@ -7,6 +7,7 @@ import { connectDB } from "@/lib/db";
 import Client from "@/models/Client";
 import { authMiddleware } from "@/middleware/Authmiddleware";
 import { sendWelcomeEmail } from "@/lib/mailer";
+import { GHANA_CARD_REGEX } from "@/lib/validators";
 import { z } from "zod";
 
 const createClientSchema = z.object({
@@ -15,7 +16,11 @@ const createClientSchema = z.object({
   email: z.string().email(),
   phone: z.string().min(10),
   address: z.string().min(5),
-  nationalId: z.string().min(5),
+  nationalId: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(GHANA_CARD_REGEX, "Invalid Ghana card number. Format: GHA-726017025-4"),
   dateOfBirth: z.string().optional(),
   occupation: z.string().optional(),
   // Temporary password — client should change on first login

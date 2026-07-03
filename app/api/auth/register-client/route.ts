@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Client from "@/models/Client";
 import { notify } from "@/lib/notify";
+import { GHANA_CARD_REGEX } from "@/lib/validators";
 import { z } from "zod";
 
 const schema = z.object({
@@ -16,7 +17,11 @@ const schema = z.object({
   email: z.string().email("Valid email is required"),
   phone: z.string().min(10, "Valid phone number is required"),
   address: z.string().min(5, "Address is required"),
-  nationalId: z.string().min(5, "Ghana card number is required"),
+  nationalId: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(GHANA_CARD_REGEX, "Invalid Ghana card number. Format: GHA-726017025-4"),
   dateOfBirth: z.string().optional(),
   occupation: z.string().optional(),
   password: z.string().min(6, "Password must be at least 6 characters"),

@@ -12,6 +12,7 @@ import {
   PenLine,
 } from "lucide-react";
 import { toast } from "sonner";
+import { GHANA_CARD_REGEX, GHANA_CARD_HINT } from "@/lib/validators";
 
 type CardSide = "front" | "back";
 
@@ -117,6 +118,10 @@ export default function ClientSelfRegisterPage() {
     e.preventDefault();
     setError("");
 
+    if (!GHANA_CARD_REGEX.test(form.nationalId.trim().toUpperCase())) {
+      setError("Invalid Ghana card number. " + GHANA_CARD_HINT);
+      return;
+    }
     if (!frontImg) {
       setError("Please upload the front of your Ghana card.");
       return;
@@ -291,8 +296,35 @@ export default function ClientSelfRegisterPage() {
               <label className={labelCls}>Ghana Card Number</label>
               <div className="relative">
                 <IdCard className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#C8963E]/60" />
-                <input required value={form.nationalId} onChange={set("nationalId")} className={inputCls + " pl-10"} placeholder="GHA-000000000-0" />
+                <input
+                  required
+                  value={form.nationalId}
+                  onChange={(e) =>
+                    setForm((s) => ({
+                      ...s,
+                      nationalId: e.target.value.toUpperCase(),
+                    }))
+                  }
+                  className={inputCls + " pl-10"}
+                  placeholder="GHA-726017025-4"
+                  maxLength={15}
+                  aria-invalid={
+                    !!form.nationalId &&
+                    !GHANA_CARD_REGEX.test(form.nationalId.trim())
+                  }
+                />
               </div>
+              <p
+                className="text-[11px] mt-1.5"
+                style={{
+                  color:
+                    form.nationalId && !GHANA_CARD_REGEX.test(form.nationalId.trim())
+                      ? "#f87171"
+                      : "rgba(255,255,255,0.35)",
+                }}
+              >
+                {GHANA_CARD_HINT}
+              </p>
             </div>
 
             {/* Ghana card upload */}

@@ -639,7 +639,7 @@ export default function ClientsPage() {
                       onChange={(v) =>
                         setForm((f) => ({ ...f, nationalId: v }))
                       }
-                      placeholder="GHA-XXXXXXXXX-X"
+                      placeholder="GHA-726017025-4"
                       required
                     />
                   </Field>
